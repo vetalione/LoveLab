@@ -66,25 +66,29 @@ function Tube({ value, color, label }) {
 function SliderRow({ model, onChange }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      {CATEGORIES.map((c) => (
-        <div key={c.id} className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm">
-          <div className="text-sm font-semibold mb-1">{c.label}</div>
-          <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={model[c.id]}
-            onChange={(e) => onChange({ ...model, [c.id]: Number(e.target.value) })}
-            className="w-full touch-none"
-          />
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-xs text-neutral-500">0</div>
-            <div className="text-xs font-medium">{model[c.id]}%</div>
-            <div className="text-xs text-neutral-500">100</div>
+      {CATEGORIES.map((c) => {
+        const val = model[c.id];
+        return (
+          <div key={c.id} className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm">
+            <div className="text-sm font-semibold mb-1">{c.label}</div>
+            <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={val}
+              onChange={(e) => onChange({ ...model, [c.id]: Number(e.target.value) })}
+              className="w-full touch-none"
+              style={{ '--c': c.color, '--p': `${val}%`, accentColor: c.color }}
+            />
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-xs text-neutral-500">0</div>
+              <div className="text-xs font-medium">{val}%</div>
+              <div className="text-xs text-neutral-500">100</div>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -544,12 +548,12 @@ export default function RelationshipLab() {
       notify("Карточка отправлена", { type: "success" });
     }
     sync.send({ type: "card", payload });
-  }, [impact, myRole, partnerInbox, sendCardToPartner, setPartnerInbox]);
+  }, [myRole, partnerInbox, setPartnerInbox, sync]);
 
   const handleSendSuggestion = useCallback((card) => {
     const withWeight = { ...card, weight: card.weight ?? impact };
     sendCardToPartner(withWeight, categoryForHints);
-  }, [impact, categoryForHints, sendCardToPartner]);
+  }, [impact, categoryForHints, sendCardToPartner]); // sendCardToPartner stable by its deps
 
   const acceptCard = useCallback((item) => {
     const { categoryId } = item;
