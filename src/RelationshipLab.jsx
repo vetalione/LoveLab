@@ -806,15 +806,6 @@ export default function RelationshipLab() {
     );
     setPacks(next);
     setCardForm({ title: "", desc: "", weight: 5 });
-    // добавляем созданную карточку также в быстрые подсказки для своей категории
-    const createdPack = next.find((p) => p.id === selectedPackId);
-    if (createdPack) {
-      const newest = createdPack.cards[0];
-      setGen((g) => [
-        { id: uid(), title: newest.title, desc: newest.desc, weight: newest.weight, categoryId: createdPack.categoryId },
-        ...g,
-      ]);
-    }
     sync.send({ type: "packs", payload: next });
   }, [selectedPackId, cardForm, packs]);
   const togglePackActive = useCallback(function togglePackActive(id) {
@@ -853,7 +844,15 @@ export default function RelationshipLab() {
     const builtIn = (BANK[categoryForHints] || []).map(b => ({ ...b, source: 'builtin' }));
     const customs = activeCustomCards.map((c) => ({ id: c.id, packId: c.packId, title: c.title, desc: c.desc, weight: c.weight, source: 'custom', categoryId: categoryForHints }));
     const generated = gen.filter((x) => x.categoryId === categoryForHints).map(g => ({ ...g, source: 'generated' }));
-    return [...generated, ...customs, ...builtIn];
+    // Order: custom (user), then generated, then built-in. Deduplicate by title+desc.
+    const all = [...customs, ...generated, ...builtIn];
+    const seen = new Set();
+    return all.filter(c => {
+      const key = (c.title + '|' + c.desc).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [categoryForHints, activeCustomCards, gen]);
 
   const handleDeleteSuggestion = useCallback((item) => {
