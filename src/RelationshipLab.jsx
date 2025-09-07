@@ -1015,29 +1015,7 @@ export default function RelationshipLab() {
           </div>
         </header>
 
-        {/* Stats Block */}
-        <section className="mb-6">
-          <div className="flex items-center gap-3 mb-3 flex-wrap">
-            <h2 className="text-lg font-semibold tracking-tight">Статистика вклада</h2>
-            <div className="flex gap-2 bg-white/80 rounded-2xl p-1 border">
-              {['sent','accepted','weight'].map(mode => (
-                <button key={mode} onClick={()=>setStatsView(mode)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${statsView===mode? 'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`}>{mode==='sent'?'Отправлено':mode==='accepted'?'Принято':'Вес'}</button>
-              ))}
-            </div>
-            <div className="text-xs text-neutral-500">A = вы ({myRole}), B = партнёр</div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label={statsPairs.label} a={statsPairs.A} b={statsPairs.B} />
-            </div>
-            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label="Принято идей" a={stats.A.accepted} b={stats.B.accepted} />
-            </div>
-            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label="Суммарный вес" a={stats.A.totalWeight} b={stats.B.totalWeight} />
-            </div>
-          </div>
-        </section>
+  {/* Stats Block moved below inbox */}
 
   {/* Average section removed (was id="avg") since interactive tubes below replace it */}
 
@@ -1060,6 +1038,30 @@ export default function RelationshipLab() {
             <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> canEdit && setMe(v)} disabled={!canEdit} />
           </div>
           <SliderRow model={me} onChange={(v) => canEdit && setMe(v)} />
+        </section>
+
+        {/* Contribution Stats */}
+        <section className="mb-10" id="contrib-stats">
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <h2 className="text-base sm:text-lg font-semibold">Статистика вклада</h2>
+            <div className="flex gap-2 bg-white/80 rounded-2xl p-1 border">
+              {['sent','accepted','weight'].map(mode => (
+                <button key={mode} onClick={()=>setStatsView(mode)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${statsView===mode? 'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`}>{mode==='sent'?'Отправлено':mode==='accepted'?'Принято':'Вес'}</button>
+              ))}
+            </div>
+            <div className="text-xs text-neutral-500">A = вы ({myRole}), B = партнёр</div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
+              <StatBar label={statsPairs.label} a={statsPairs.A} b={statsPairs.B} />
+            </div>
+            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
+              <StatBar label="Принято идей" a={stats.A.accepted} b={stats.B.accepted} />
+            </div>
+            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
+              <StatBar label="Суммарный вес" a={stats.A.totalWeight} b={stats.B.totalWeight} />
+            </div>
+          </div>
         </section>
 
         {/* Suggestions + weight */}
