@@ -850,7 +850,12 @@ export default function RelationshipLab() {
   // refresh remaining counts after successful consume
   try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
       } else {
-        throw new Error('AI ' + resp.status);
+        let errMsg = 'AI ' + resp.status;
+        try {
+          const ej = await resp.json();
+          if (ej?.error) errMsg = ej.error + (ej.detail ? ': ' + ej.detail : '');
+        } catch {}
+        throw new Error(errMsg);
       }
     } catch (e) {
       // fallback local
@@ -860,7 +865,7 @@ export default function RelationshipLab() {
         tries++;
       } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 4);
       card = local;
-      notify('AI недоступен — локальная идея', { type: 'warn' });
+      notify('AI недоступен — локальная идея', { type: 'warn', msg: String(e.message||'') });
     }
     if (!card) return;
     lastGeneratedRef.current[categoryForHints] = card.title;
