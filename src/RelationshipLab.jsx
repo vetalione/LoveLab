@@ -827,16 +827,34 @@ export default function RelationshipLab() {
   // Random suggestion → add to "cards & hints" list (not auto‑send)
   // Prevent immediate duplicates per category
   const lastGeneratedRef = useRef({});
-  const addRandomSuggestion = useCallback(() => {
-    let tries = 0;
+  const addRandomSuggestion = useCallback(async () => {
+    // Try remote AI endpoint first
     let card;
-    do {
-      card = generateCard(categoryForHints, impact);
-      tries++;
-    } while (lastGeneratedRef.current[categoryForHints] === card.title && tries < 3);
+    try {
+      const resp = await fetch('/api/generate-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId: categoryForHints, weight: impact })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        card = { title: data.title, desc: data.desc, weight: data.weight };
+      } else {
+        throw new Error('AI ' + resp.status);
+      }
+    } catch (e) {
+      // Fallback to local pseudo-random generator
+      let tries = 0; let local;
+      do {
+        local = generateCard(categoryForHints, impact);
+        tries++;
+      } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 3);
+      card = local;
+      notify('AI недоступен — локальная идея', { type: 'warn' });
+    }
     lastGeneratedRef.current[categoryForHints] = card.title;
     setGen((g) => [{ id: uid(), ...card, categoryId: categoryForHints }, ...g]);
-    notify("Сгенерирована карточка", { type: "success", msg: card.title });
+    notify('Сгенерирована карточка', { type: 'success', msg: card.title });
   }, [categoryForHints, impact]);
 
   // Compose visible suggestions list
