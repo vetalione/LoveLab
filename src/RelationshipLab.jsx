@@ -838,10 +838,28 @@ export default function RelationshipLab() {
       });
       if (resp.status === 429) {
         const data = await resp.json().catch(()=>({}));
-        notify('Лимит на сегодня', { type: 'warn', msg: data?.msg || '10 в день' });
-  // refresh remaining counts
-  try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
-        return; // не пробуем локально — сигнал юзеру что лимит
+        // Локальный дневной лимит: просто сообщаем и выходим
+        if (data?.error === 'limit') {
+          notify('Лимит на сегодня', { type: 'warn', msg: data?.msg || '10 в день' });
+          try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
+          return;
+        }
+        // Upstream OpenAI 429 — не тратим локальную квоту, делаем локальный fallback
+        if (data?.error === 'upstream-429' || data?.error === 'OpenAI rate limit') {
+          let tries = 0; let local;
+          do {
+            local = generateCard(categoryForHints, impact + (tries>1?1:0));
+            tries++;
+          } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 4);
+          const fallbackCard = local;
+          lastGeneratedRef.current[categoryForHints] = fallbackCard.title;
+          setGen((g) => [{ id: uid(), ...fallbackCard, categoryId: categoryForHints }, ...g]);
+          notify('AI перегружен — локальная идея', { type: 'warn', msg: data?.msg || 'повторите позже' });
+          notify('Сгенерирована карточка', { type: 'success', msg: fallbackCard.title });
+          return;
+        }
+        // Непонятный 429 — обрабатываем как upstream и делаем fallback через catch
+        throw new Error('OpenAI 429');
       }
       if (resp.ok) {
         const data = await resp.json();
