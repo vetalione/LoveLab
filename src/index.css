@@ -4,3 +4,62 @@
 
 /* Custom basic tweaks */
 html, body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+
+/* Range slider (cross-browser baseline) */
+input[type=range] {
+	width: 100%;
+	background: transparent;
+	/* Modern browsers */
+	accent-color: #2563eb; /* fallback accent if inline style not set */
+}
+
+/* WebKit track */
+input[type=range]::-webkit-slider-runnable-track {
+	height: 6px;
+	border-radius: 999px;
+	background:
+		linear-gradient(var(--c, #2563eb), var(--c, #2563eb)) 0/ var(--p,0%) 100% no-repeat,
+		#e5e5e5;
+}
+input[type=range]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	height: 18px;
+	width: 18px;
+	margin-top: -6px; /* centers thumb over 6px track */
+	border-radius: 50%;
+	background: #2563eb;
+	border: 2px solid white;
+	box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+	cursor: pointer;
+	transition: transform .15s;
+}
+input[type=range]:active::-webkit-slider-thumb { transform: scale(1.05); }
+
+/* Firefox */
+input[type=range]::-moz-range-track {
+	height: 6px;
+	background: #e5e5e5;
+	border-radius: 999px;
+}
+input[type=range]::-moz-range-progress {
+	height: 6px;
+	background: var(--c,#2563eb);
+	border-radius: 999px;
+}
+input[type=range]::-moz-range-thumb {
+	height: 18px;
+	width: 18px;
+	border-radius: 50%;
+	background: #2563eb;
+	border: 2px solid white;
+	box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+	cursor: pointer;
+	transition: transform .15s;
+}
+input[type=range]:active::-moz-range-thumb { transform: scale(1.05); }
+
+/* High contrast / reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+	input[type=range]::-webkit-slider-thumb,
+	input[type=range]::-moz-range-thumb { transition: none; }
+}

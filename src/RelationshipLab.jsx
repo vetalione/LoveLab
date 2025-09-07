@@ -23,6 +23,63 @@ const CATEGORIES = [
   { id: "respect", label: "Взаимное уважение и поддержка", color: "#C084FC", tip: "Границы, признание целей, опора в сложностях" },
 ];
 
+// Minimalistic inline icons (stroke currentColor / filled) to save bundle & avoid deps
+function CategoryIcon({ id, color }) {
+  const common = { width: 22, height: 22, strokeWidth: 1.6, stroke: 'currentColor', fill: 'none', vectorEffect: 'non-scaling-stroke' };
+  const col = { color };
+  switch (id) {
+    case 'trust': // shield-heart
+      return (
+        <div className="flex items-center justify-center" style={col} aria-hidden>
+          <svg {...common} viewBox="0 0 24 24">
+            <path d="M12 3l7 3v5.2c0 4.1-2.9 7.9-7 9-4.1-1.1-7-4.9-7-9V6l7-3z" />
+            <path d="M9.7 11.3a2.1 2.1 0 013-3 2.1 2.1 0 013 3L12.7 14a1 1 0 01-1.4 0l-1.6-1.6z" strokeLinejoin="round" />
+          </svg>
+        </div>
+      );
+    case 'friendship': // two users
+      return (
+        <div className="flex items-center justify-center" style={col} aria-hidden>
+          <svg {...common} viewBox="0 0 24 24">
+            <circle cx="8" cy="9" r="3" />
+            <circle cx="16" cy="9" r="3" />
+            <path d="M4.5 18a3.5 3.5 0 013.5-3.5h.5A3.5 3.5 0 0112 18" />
+            <path d="M12 18a3.5 3.5 0 013.5-3.5h.5A3.5 3.5 0 0119.5 18" />
+          </svg>
+        </div>
+      );
+    case 'passion': // heart / flame hybrid
+      return (
+        <div className="flex items-center justify-center" style={col} aria-hidden>
+          <svg {...common} viewBox="0 0 24 24">
+            <path d="M12.7 5.2a3.2 3.2 0 015.2 2.5c0 3.5-4 6.1-6.4 8.3-2.4-2.2-6.4-4.8-6.4-8.3A3.2 3.2 0 0110.3 5.2 3 3 0 0112 7a3 3 0 01.7-1.8z" />
+          </svg>
+        </div>
+      );
+    case 'adventure': // compass
+      return (
+        <div className="flex items-center justify-center" style={col} aria-hidden>
+          <svg {...common} viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M15.5 8.5l-2 5-5 2 2-5 5-2z" />
+            <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+      );
+    case 'respect': // hands/support
+      return (
+        <div className="flex items-center justify-center" style={col} aria-hidden>
+          <svg {...common} viewBox="0 0 24 24">
+            <path d="M8 13l3 3 5-5" />
+            <path d="M5 8l4-4h6l4 4v6l-4 4H9l-4-4V8z" />
+          </svg>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 const defaultScale = { trust: 50, friendship: 50, passion: 50, adventure: 50, respect: 50 };
 
 // Built-in suggestion bank (shortened)
@@ -52,15 +109,152 @@ const BANK = {
 
 // ====== Visual helpers ======
 function Tube({ value, color, label }) {
+  // value: 0-100
+  const fillHeight = `${value}%`;
+  const glassGradient = 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0.12) 100%)';
+  const fillGradient = `linear-gradient(180deg, ${lighten(color,35)} 0%, ${lighten(color,10)} 35%, ${color} 85%, ${darken(color,12)} 100%)`;
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative h-40 w-14 rounded-t-xl border border-neutral-300 bg-white shadow-inner overflow-hidden">
-        <div className="absolute bottom-0 left-0 right-0 transition-all duration-500" style={{ height: `${value}%`, backgroundColor: color }} />
+  <div className="relative h-40 w-14 rounded-[20px] border-2 border-neutral-300/70 bg-gradient-to-b from-neutral-200/50 to-neutral-100/20 backdrop-blur-sm shadow-sm overflow-hidden">
+        {/* Inner glass effect */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: glassGradient }} />
+        {/* Fill */}
+        <div
+          className="absolute bottom-0 left-0 right-0 transition-[height] duration-500 ease-out rounded-b-[16px]"
+          style={{ height: fillHeight, background: fillGradient, boxShadow: 'inset 0 2px 4px -2px rgba(255,255,255,0.8), inset 0 -3px 6px -2px rgba(0,0,0,0.25)' }}
+        />
+        {/* Vertical highlight */}
+        <div className="absolute inset-y-0 left-0 w-[38%] pointer-events-none mix-blend-screen" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)' }} />
+        {/* Bottom elliptical shine */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-6 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.05) 70%, transparent 75%)' }} />
       </div>
-      <div className="text-xs text-neutral-600 text-center px-1">{label}</div>
-      <div className="text-xs font-medium">{value}%</div>
+      <div className="text-xs text-neutral-600 text-center leading-tight px-1">{label}</div>
+  <div className="text-xs sm:text-sm font-bold tracking-tight text-neutral-700">{value}%</div>
     </div>
   );
+}
+
+// Editable tubes for direct manipulation of player values
+function EditableTubes({ model, partner, avg, onChange, disabled }) {
+  const handleSet = useCallback((catId, clientY, rect) => {
+    const rel = 1 - (clientY - rect.top) / rect.height;
+    const percent = Math.max(0, Math.min(1, rel));
+    const v = Math.round(percent * 100);
+    onChange({ ...model, [catId]: v });
+  }, [model, onChange]);
+  const [hovered, setHovered] = useState(null);
+
+  const startDrag = (e, catId) => {
+    if (disabled) return;
+    e.preventDefault();
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+    const move = (ev) => {
+      const y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+      handleSet(catId, y, rect);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', up);
+    // initial
+    move(e);
+  };
+
+  const handleKey = (e, catId) => {
+    if (disabled) return;
+    const delta = (e.key === 'ArrowUp') ? 1 : (e.key === 'ArrowDown') ? -1 : 0;
+    if (delta !== 0) {
+      e.preventDefault();
+      const next = Math.max(0, Math.min(100, (model[catId] ?? 0) + delta));
+      onChange({ ...model, [catId]: next });
+    }
+  };
+
+  return (
+  <div className="flex gap-4 md:gap-6 lg:gap-8 justify-between">
+      {CATEGORIES.map(c => {
+        const v = model[c.id];
+        return (
+          <div
+            key={c.id}
+      className="flex flex-col items-center gap-1 select-none w-16 relative"
+            aria-label={c.label}
+            onMouseEnter={() => setHovered(c.id)}
+            onMouseLeave={() => setHovered(h => h === c.id ? null : h)}
+            onFocus={() => setHovered(c.id)}
+            onBlur={() => setHovered(h => h === c.id ? null : h)}
+          >
+            {/* Tooltip */}
+            {hovered === c.id && (
+              <div className="absolute -top-28 left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ width: '168px' }}>
+                <div className="px-3 py-2 rounded-xl bg-white/95 backdrop-blur border shadow text-[10px] leading-tight space-y-1">
+                  <div className="text-[10px] font-semibold text-neutral-700 truncate">{c.label}</div>
+                  <div className="flex justify-between"><span className="text-neutral-500">Я</span><span className="font-medium">{v}%</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-500">Партнёр</span><span className="font-medium">{partner?.[c.id]}%</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-500">Среднее</span><span className="font-medium">{avg?.[c.id]}%</span></div>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              className={"relative h-40 w-16 rounded-[22px] border-2 transition-colors outline-none " + (disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer focus:ring-2 focus:ring-offset-1 focus:ring-neutral-400')}
+              style={{ borderColor: c.color + '80' }}
+              onPointerDown={(e)=>startDrag(e,c.id)}
+              onTouchStart={(e)=>startDrag(e,c.id)}
+              onKeyDown={(e)=>handleKey(e,c.id)}
+              role="slider"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={v}
+              aria-valuetext={`${v}%`}
+              tabIndex={disabled ? -1 : 0}
+            >
+              <div className="absolute inset-0 rounded-[22px] overflow-hidden">
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0.12) 100%)' }} />
+                <div
+                  className="absolute bottom-0 left-0 right-0 rounded-b-[20px] transition-[height] duration-300"
+                  style={{ height: v + '%', background: `linear-gradient(180deg, ${lighten(c.color,35)} 0%, ${lighten(c.color,10)} 35%, ${c.color} 85%, ${darken(c.color,12)} 100%)`, boxShadow: 'inset 0 2px 4px -2px rgba(255,255,255,0.8), inset 0 -3px 6px -2px rgba(0,0,0,0.25)' }}
+                >
+                  {v>0 && v<100 && (
+                    <>
+                      <div className="absolute -top-px left-0 right-0 h-px bg-black/25 mix-blend-multiply opacity-40" />
+                      <div className="absolute top-0 left-0 right-0 h-2 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 100%)' }} />
+                    </>
+                  )}
+                </div>
+                <div className="absolute inset-y-0 left-0 w-[38%] pointer-events-none mix-blend-screen" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)' }} />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-6 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.05) 70%, transparent 75%)' }} />
+              </div>
+            </button>
+            <div className="text-xs sm:text-sm font-bold text-neutral-800 leading-none">{v}%</div>
+            <div className="h-6 flex items-center justify-center" aria-hidden>
+              <CategoryIcon id={c.id} color={c.color} />
+              <span className="sr-only">{c.label}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// simple color helpers (no deps) — operate on hex colors like #RRGGBB
+function lighten(hex, pct) { return shift(hex, pct); }
+function darken(hex, pct) { return shift(hex, -pct); }
+function shift(hex, pct) {
+  if(!/^#?[0-9a-fA-F]{6}$/.test(hex||'')) return hex;
+  const h = hex.replace('#','');
+  const nums = [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  const f = (c)=> Math.max(0, Math.min(255, Math.round(c + (pct/100)*255)));
+  const out = nums.map(f).map(n=>n.toString(16).padStart(2,'0')).join('');
+  return '#'+out;
 }
 
 function SliderRow({ model, onChange }) {
@@ -93,21 +287,36 @@ function SliderRow({ model, onChange }) {
   );
 }
 
-function Suggestions({ items, onSend }) {
-  // items: [{title, desc, weight?}]
+function Suggestions({ items, onSend, onDelete }) {
+  // items: [{id?, title, desc, weight?, source, packId?, categoryId?}]
   const list = items || [];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
       {list.map((p, i) => (
-        <div key={i} className="rounded-2xl border p-3 bg-white/80 shadow-sm flex flex-col justify-between">
+        <div key={p.id || i} className="group rounded-2xl border p-3 bg-white/80 shadow-sm flex flex-col justify-between relative">
+          {(p.source === 'generated' || p.source === 'custom') && (
+            <button
+              type="button"
+              onClick={() => onDelete?.(p)}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-neutral-400 hover:text-red-600 text-xs"
+              title="Удалить карточку"
+            >
+              ×
+            </button>
+          )}
           <div>
             <div className="text-sm font-semibold mb-1 flex items-center gap-2">
               <span>{p.title}</span>
               {p.weight ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{p.weight}</span> : null}
             </div>
-            <div className="text-xs text-neutral-600">{p.desc}</div>
+            <div className="text-xs text-neutral-600 whitespace-pre-line">{p.desc}</div>
           </div>
-          <button onClick={() => onSend(p)} className="mt-3 inline-flex items-center justify-center text-sm font-semibold rounded-2xl px-4 py-3 bg-neutral-900 text-white active:scale-[0.99]">Отправить партнёру</button>
+          <button
+            onClick={() => onSend(p)}
+            className="mt-3 inline-flex items-center justify-center text-sm font-semibold rounded-2xl px-4 py-3 bg-neutral-900 text-white active:scale-[0.99] disabled:opacity-40"
+          >
+            Отправить партнёру
+          </button>
         </div>
       ))}
     </div>
@@ -417,6 +626,7 @@ export default function RelationshipLab() {
 
   const me = player === "A" ? A : B;
   const setMe = player === "A" ? setA : setB;
+  const partner = player === "A" ? B : A;
   const myInbox = player === "A" ? inboxA : inboxB;
   const setMyInbox = player === "A" ? setInboxA : setInboxB;
   const partnerInbox = player === "A" ? inboxB : inboxA;
@@ -640,12 +850,21 @@ export default function RelationshipLab() {
 
   // Compose visible suggestions list
   const suggestionsForUI = useMemo(() => {
-    const builtIn = BANK[categoryForHints] || [];
-    const customs = activeCustomCards.map((c) => ({ title: c.title, desc: c.desc, weight: c.weight }));
-    const generated = gen.filter((x) => x.categoryId === categoryForHints);
-    // новые сначала: generated, затем пользовательские, затем встроенные
+    const builtIn = (BANK[categoryForHints] || []).map(b => ({ ...b, source: 'builtin' }));
+    const customs = activeCustomCards.map((c) => ({ id: c.id, packId: c.packId, title: c.title, desc: c.desc, weight: c.weight, source: 'custom', categoryId: categoryForHints }));
+    const generated = gen.filter((x) => x.categoryId === categoryForHints).map(g => ({ ...g, source: 'generated' }));
     return [...generated, ...customs, ...builtIn];
   }, [categoryForHints, activeCustomCards, gen]);
+
+  const handleDeleteSuggestion = useCallback((item) => {
+    if (item.source === 'generated') {
+      setGen(g => g.filter(x => x.id !== item.id));
+      notify('Удалена сгенерированная карточка', { type: 'warn', msg: item.title });
+    } else if (item.source === 'custom') {
+      setPacks(packs => packs.map(p => p.id === item.packId ? { ...p, cards: p.cards.filter(c => c.id !== item.id) } : p));
+      notify('Удалена пользовательская карточка', { type: 'warn', msg: item.title });
+    }
+  }, []);
 
   // ====== UI ======
   const [showSync, setShowSync] = useState(false);
@@ -701,17 +920,7 @@ export default function RelationshipLab() {
           </div>
         </header>
 
-        {/* Average */}
-        <section className="mb-6 sm:mb-8" id="avg">
-          <h2 className="text-base sm:text-lg font-semibold mb-3">Средний баланс</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            {CATEGORIES.map((c) => (
-              <div key={c.id} className="flex flex-col items-center p-3 sm:p-4 rounded-2xl border bg-white">
-                <Tube value={avg[c.id]} color={c.color} label={c.label} />
-              </div>
-            ))}
-          </div>
-        </section>
+  {/* Average section removed (was id="avg") since interactive tubes below replace it */}
 
         {/* My setup */}
         <section className="mb-8" id="base">
@@ -723,6 +932,13 @@ export default function RelationshipLab() {
             >
               {locked[player] ? "Разблокировать" : "Заблокировать"}
             </button>
+          </div>
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-neutral-500">Клик или потяни по колбе чтобы задать значение</div>
+              {!canEdit && <div className="text-xs text-red-500">Заблокировано</div>}
+            </div>
+            <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> canEdit && setMe(v)} disabled={!canEdit} />
           </div>
           <SliderRow model={me} onChange={(v) => canEdit && setMe(v)} />
         </section>
@@ -751,7 +967,7 @@ export default function RelationshipLab() {
               </button>
             </div>
           </div>
-          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} />
+          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} />
         </section>
 
         {/* Inbox */}
