@@ -36,36 +36,77 @@ export default async function handler(req, res) {
   }
   try {
     const { categoryId = 'trust', weight = 5 } = await parseBody(req);
-    const prompt = buildPrompt(categoryId, weight);
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.9,
-        max_tokens: 220,
-        messages: [
-          { role: 'system', content: 'Ты краткий русскоязычный генератор карточек действий.' },
-          { role: 'user', content: prompt }
-        ]
-      })
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      return res.status(502).json({ error: 'OpenAI error', detail: text.slice(0,500) });
+
+    // ---- RATE LIMIT (cookie based, per day, per category, limit=10) ----
+    const day = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    const cookie = req.headers.cookie || '';
+  const match = cookie.match(/rl2=([^;]+)/);
+  const cookieRaw = match ? decodeURIComponent(match[1]) : '';
+    // format: date:t,f,p,a,r  (counts numbers)
+    let counts = { date: day, t:0,f:0,p:0,a:0,r:0 };
+  if (cookieRaw) {
+      try {
+    const [savedDate, rest] = cookieRaw.split(':');
+        if (savedDate === day) {
+          const parts = rest.split(',');
+          ['t','f','p','a','r'].forEach((k,i)=>{ const v = parseInt(parts[i]||'0',10); if(!Number.isNaN(v)) counts[k]=v; });
+          counts.date = savedDate;
+        }
+      } catch {}
     }
-    const json = await response.json();
-    const raw = json.choices?.[0]?.message?.content || '';
+    const mapKey = { trust:'t', friendship:'f', passion:'p', adventure:'a', respect:'r' };
+    const k = mapKey[categoryId] || 't';
+    if (counts[k] >= 10) {
+      res.setHeader('Set-Cookie', buildCookie(counts));
+      res.setHeader('X-RateLimit-Remaining', '0');
+      return res.status(429).json({ error: 'limit', msg: 'Daily limit reached for this category' });
+    }
+    counts[k] += 1;
+    res.setHeader('Set-Cookie', buildCookie(counts));
+    res.setHeader('X-RateLimit-Remaining', String(10 - counts[k]));
+    const prompt = buildPrompt(categoryId, weight);
+    // Try model(s)
+    const models = [process.env.OPENAI_MODEL || 'gpt-4o-mini', 'gpt-4o', 'gpt-4o-mini'];
+    let json, rawRespText='';
+    let lastErr;
+    for (const model of models) {
+      try {
+        const r = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0.9,
+            max_tokens: 220,
+            messages: [
+              { role: 'system', content: 'Ты краткий русскоязычный генератор карточек действий.' },
+              { role: 'user', content: prompt }
+            ]
+          })
+        });
+        if (!r.ok) {
+          rawRespText = await r.text();
+          lastErr = new Error('OpenAI HTTP '+r.status);
+          continue;
+        }
+        json = await r.json();
+        break;
+      } catch (e) { lastErr = e; }
+    }
+    if (!json) {
+      return res.status(502).json({ error: 'OpenAI error', detail: String(lastErr?.message||'fail'), raw: rawRespText.slice(0,400) });
+    }
+    const aiRaw = json.choices?.[0]?.message?.content || '';
     let card;
     try {
       // Attempt to extract JSON
-      const match = raw.match(/\{[\s\S]*\}/);
-      card = match ? JSON.parse(match[0]) : JSON.parse(raw);
+      const match2 = aiRaw.match(/\{[\s\S]*\}/);
+      card = match2 ? JSON.parse(match2[0]) : JSON.parse(aiRaw);
     } catch {
-      return res.status(500).json({ error: 'Failed to parse AI output', raw });
+      return res.status(500).json({ error: 'Failed to parse AI output', raw: aiRaw });
     }
     if (!card.title || !card.desc) {
       return res.status(500).json({ error: 'AI output missing fields', card });
@@ -85,4 +126,9 @@ function parseBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function buildCookie(counts) {
+  const val = `${counts.date}:${counts.t},${counts.f},${counts.p},${counts.a},${counts.r}`;
+  return `rl2=${encodeURIComponent(val)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`;
 }

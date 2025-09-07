@@ -828,33 +828,39 @@ export default function RelationshipLab() {
   // Prevent immediate duplicates per category
   const lastGeneratedRef = useRef({});
   const addRandomSuggestion = useCallback(async () => {
-    // Try remote AI endpoint first
-    let card;
+    let card; let usedAI = false;
     try {
-      const resp = await fetch('/api/generate-card', {
+      const resp = await fetch('/api/generate-card?ts=' + Date.now(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryId: categoryForHints, weight: impact })
       });
+      if (resp.status === 429) {
+        const data = await resp.json().catch(()=>({}));
+        notify('Лимит на сегодня', { type: 'warn', msg: data?.msg || '10 в день' });
+        return; // не пробуем локально — сигнал юзеру что лимит
+      }
       if (resp.ok) {
         const data = await resp.json();
         card = { title: data.title, desc: data.desc, weight: data.weight };
+        usedAI = true;
       } else {
         throw new Error('AI ' + resp.status);
       }
     } catch (e) {
-      // Fallback to local pseudo-random generator
+      // fallback local
       let tries = 0; let local;
       do {
-        local = generateCard(categoryForHints, impact);
+        local = generateCard(categoryForHints, impact + (tries>1?1:0));
         tries++;
-      } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 3);
+      } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 4);
       card = local;
       notify('AI недоступен — локальная идея', { type: 'warn' });
     }
+    if (!card) return;
     lastGeneratedRef.current[categoryForHints] = card.title;
     setGen((g) => [{ id: uid(), ...card, categoryId: categoryForHints }, ...g]);
-    notify('Сгенерирована карточка', { type: 'success', msg: card.title });
+    notify(usedAI ? 'AI карточка' : 'Сгенерирована карточка', { type: 'success', msg: card.title });
   }, [categoryForHints, impact]);
 
   // Compose visible suggestions list
