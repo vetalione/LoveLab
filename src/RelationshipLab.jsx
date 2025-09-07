@@ -924,6 +924,43 @@ export default function RelationshipLab() {
     }
   }, []);
 
+  // ====== Derived Statistics ======
+  // history entries: { id, week, categoryId, delta, from }
+  const stats = useMemo(() => {
+    const base = { A: { sent:0, accepted:0, totalWeight:0 }, B: { sent:0, accepted:0, totalWeight:0 } };
+    // Sent we infer from inbox merges + history origin (from field when card accepted)
+    // Counting sent: scan all current and past cards: history.from increments sent & accepted; inbox items from a player increment sent only.
+    const sentTemp = { A:0, B:0 };
+    inboxA.forEach(c=>{ if(c.from==='A') sentTemp.A++; if(c.from==='B') sentTemp.B++; });
+    inboxB.forEach(c=>{ if(c.from==='A') sentTemp.A++; if(c.from==='B') sentTemp.B++; });
+    history.forEach(h=>{ sentTemp[h.from] = (sentTemp[h.from]||0)+1; });
+    base.A.sent = sentTemp.A; base.B.sent = sentTemp.B;
+    history.forEach(h=>{ if(h.from==='A'){ base.A.accepted++; base.A.totalWeight += h.delta; } else if(h.from==='B'){ base.B.accepted++; base.B.totalWeight += h.delta; } });
+    return base;
+  }, [inboxA, inboxB, history]);
+
+  const [statsView, setStatsView] = useState('sent'); // sent | accepted | weight
+  const statsPairs = useMemo(()=>{
+    if (statsView==='sent') return { label:'Отправлено идей', A: stats.A.sent, B: stats.B.sent };
+    if (statsView==='accepted') return { label:'Принято идей', A: stats.A.accepted, B: stats.B.accepted };
+    return { label:'Суммарный вес', A: stats.A.totalWeight, B: stats.B.totalWeight };
+  }, [statsView, stats]);
+
+  function StatBar({ label, a, b }){
+    const total = (a+b)||1;
+    const pa = Math.round((a/total)*100);
+    const pb = 100-pa;
+    return (
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs text-neutral-500"><span>{label}</span><span>{a} vs {b}</span></div>
+        <div className="h-4 w-full rounded-full bg-neutral-200 overflow-hidden flex text-[10px] font-semibold">
+          <div className="h-full bg-neutral-900 text-white flex items-center justify-center" style={{ width: pa+'%' }}>{pa>12? 'A '+pa+'%': ''}</div>
+          <div className="h-full bg-neutral-500/60 text-white flex items-center justify-center" style={{ width: pb+'%' }}>{pb>12? 'B '+pb+'%': ''}</div>
+        </div>
+      </div>
+    );
+  }
+
   // ====== UI ======
   const [showSync, setShowSync] = useState(false);
 
@@ -977,6 +1014,30 @@ export default function RelationshipLab() {
             </span>
           </div>
         </header>
+
+        {/* Stats Block */}
+        <section className="mb-6">
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <h2 className="text-lg font-semibold tracking-tight">Статистика вклада</h2>
+            <div className="flex gap-2 bg-white/80 rounded-2xl p-1 border">
+              {['sent','accepted','weight'].map(mode => (
+                <button key={mode} onClick={()=>setStatsView(mode)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${statsView===mode? 'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`}>{mode==='sent'?'Отправлено':mode==='accepted'?'Принято':'Вес'}</button>
+              ))}
+            </div>
+            <div className="text-xs text-neutral-500">A = вы ({myRole}), B = партнёр</div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
+              <StatBar label={statsPairs.label} a={statsPairs.A} b={statsPairs.B} />
+            </div>
+            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
+              <StatBar label="Принято идей" a={stats.A.accepted} b={stats.B.accepted} />
+            </div>
+            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
+              <StatBar label="Суммарный вес" a={stats.A.totalWeight} b={stats.B.totalWeight} />
+            </div>
+          </div>
+        </section>
 
   {/* Average section removed (was id="avg") since interactive tubes below replace it */}
 
