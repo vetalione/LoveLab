@@ -26,9 +26,36 @@ function buildPrompt(categoryId, weight) {
 }
 
 export default async function handler(req, res) {
+  const LIMIT = 10;
+  if (req.method === 'GET') {
+    // Return remaining counts without consuming quota
+    const day = new Date().toISOString().slice(0,10);
+    const cookie = req.headers.cookie || '';
+    const match = cookie.match(/rl2=([^;]+)/);
+    const cookieRaw = match ? decodeURIComponent(match[1]) : '';
+    let counts = { date: day, t:0,f:0,p:0,a:0,r:0 };
+    if (cookieRaw) {
+      try {
+        const [savedDate, rest] = cookieRaw.split(':');
+        if (savedDate === day) {
+          const parts = rest.split(',');
+            ['t','f','p','a','r'].forEach((k,i)=>{ const v = parseInt(parts[i]||'0',10); if(!Number.isNaN(v)) counts[k]=v; });
+          counts.date = savedDate;
+        }
+      } catch {}
+    }
+    const remaining = {
+      trust: Math.max(0, LIMIT - counts.t),
+      friendship: Math.max(0, LIMIT - counts.f),
+      passion: Math.max(0, LIMIT - counts.p),
+      adventure: Math.max(0, LIMIT - counts.a),
+      respect: Math.max(0, LIMIT - counts.r)
+    };
+    return res.status(200).json({ remaining, limit: LIMIT });
+  }
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Use POST' });
+    res.setHeader('Allow', 'GET, POST');
+    return res.status(405).json({ error: 'Use GET or POST' });
   }
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -56,14 +83,14 @@ export default async function handler(req, res) {
     }
     const mapKey = { trust:'t', friendship:'f', passion:'p', adventure:'a', respect:'r' };
     const k = mapKey[categoryId] || 't';
-    if (counts[k] >= 10) {
+  if (counts[k] >= LIMIT) {
       res.setHeader('Set-Cookie', buildCookie(counts));
       res.setHeader('X-RateLimit-Remaining', '0');
       return res.status(429).json({ error: 'limit', msg: 'Daily limit reached for this category' });
     }
     counts[k] += 1;
     res.setHeader('Set-Cookie', buildCookie(counts));
-    res.setHeader('X-RateLimit-Remaining', String(10 - counts[k]));
+  res.setHeader('X-RateLimit-Remaining', String(LIMIT - counts[k]));
     const prompt = buildPrompt(categoryId, weight);
     // Try model(s)
     const models = [process.env.OPENAI_MODEL || 'gpt-4o-mini', 'gpt-4o', 'gpt-4o-mini'];

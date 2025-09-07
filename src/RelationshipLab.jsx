@@ -609,6 +609,7 @@ export default function RelationshipLab() {
 
   // generated suggestions (per category)
   const [gen, setGen] = useState([]); // [{id,title,desc,weight,categoryId}]
+  const [remainingAI, setRemainingAI] = useState(null); // {trust: n,...}
 
   // toasts
   const [toasts, setToasts] = useState([]);
@@ -838,12 +839,16 @@ export default function RelationshipLab() {
       if (resp.status === 429) {
         const data = await resp.json().catch(()=>({}));
         notify('Лимит на сегодня', { type: 'warn', msg: data?.msg || '10 в день' });
+  // refresh remaining counts
+  try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
         return; // не пробуем локально — сигнал юзеру что лимит
       }
       if (resp.ok) {
         const data = await resp.json();
         card = { title: data.title, desc: data.desc, weight: data.weight };
         usedAI = true;
+  // refresh remaining counts after successful consume
+  try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
       } else {
         throw new Error('AI ' + resp.status);
       }
@@ -862,6 +867,13 @@ export default function RelationshipLab() {
     setGen((g) => [{ id: uid(), ...card, categoryId: categoryForHints }, ...g]);
     notify(usedAI ? 'AI карточка' : 'Сгенерирована карточка', { type: 'success', msg: card.title });
   }, [categoryForHints, impact]);
+
+  // Fetch remaining limits once on mount
+  useEffect(() => {
+    (async () => {
+      try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
+    })();
+  }, []);
 
   // Compose visible suggestions list
   const suggestionsForUI = useMemo(() => {
@@ -985,9 +997,20 @@ export default function RelationshipLab() {
                   </option>
                 ))}
               </select>
-              <button onClick={addRandomSuggestion} className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${sendingPulse ? "ring-2 ring-green-400" : ""}`}>
-                Случайная карточка
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={addRandomSuggestion}
+                  disabled={remainingAI && remainingAI[categoryForHints] === 0}
+                  className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${sendingPulse ? "ring-2 ring-green-400" : ""} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                >
+                  {remainingAI ? `Случайно (${remainingAI[categoryForHints]})` : 'Случайно'}
+                </button>
+                {remainingAI && (
+                  <span className="text-[10px] px-2 py-1 rounded-full border bg-white" title="Осталось генераций на сегодня по категории">
+                    {remainingAI[categoryForHints]} / 10
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} />
@@ -1193,8 +1216,12 @@ export default function RelationshipLab() {
             </option>
           ))}
         </select>
-        <button onClick={addRandomSuggestion} className={`px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white active:scale-[0.99] ${sendingPulse ? "ring-2 ring-green-400" : ""}`}>
-          Случайно
+        <button
+          onClick={addRandomSuggestion}
+          disabled={remainingAI && remainingAI[categoryForHints]===0}
+          className={`px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white active:scale-[0.99] ${sendingPulse ? "ring-2 ring-green-400" : ""} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+        >
+          {remainingAI ? `Случайно (${remainingAI[categoryForHints]})` : 'Случайно'}
         </button>
 
         {/* Мобильные переключатели: экран и роль */}
