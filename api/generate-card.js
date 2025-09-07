@@ -3,7 +3,7 @@
 // Returns { title, desc, weight }
 // IMPORTANT: set OPENAI_API_KEY in Vercel project settings.
 
-export const config = { runtime: 'nodejs18.x' };
+export const config = { runtime: 'nodejs' };
 
 const CATEGORY_HINTS = {
   trust: 'доверие, уязвимость, честность, безопасное открытое общение',
