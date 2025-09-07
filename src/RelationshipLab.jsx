@@ -1136,40 +1136,7 @@ export default function RelationshipLab() {
 
   {/* Rituals removed */}
 
-        {/* Stats */}
-        <section className="mb-12" id="stats">
-          <h2 className="text-base sm:text-lg font-semibold mb-3">Статистика по неделям</h2>
-          <div className="overflow-x-auto rounded-2xl border">
-            <table className="min-w-full text-xs sm:text-sm">
-              <thead>
-                <tr className="text-left bg-neutral-100">
-                  <th className="p-2 border">Неделя</th>
-                  {CATEGORIES.map((c) => (
-                    <th key={c.id} className="p-2 border">
-                      {c.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {getSortedWeeks(history).map(({ week, items }) => (
-                  <tr key={week}>
-                    <td className="p-2 border font-medium">{week}</td>
-                    {CATEGORIES.map((c) => (
-                      <td key={c.id} className="p-2 border align-top">{sumDelta(items, c.id)}</td>
-                    ))}
-                  </tr>
-                ))}
-                <tr className="bg-neutral-50 font-medium">
-                  <td className="p-2 border">Итого</td>
-                  {CATEGORIES.map((c) => (
-                    <td key={c.id} className="p-2 border">{sumDelta(history, c.id)}</td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+  {/* Old weekly stats removed in favor of new contribution stats above */}
 
         {/* Packs Editor */}
         <section className="mb-20" id="packs">
