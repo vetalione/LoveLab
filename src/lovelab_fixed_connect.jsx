@@ -23,63 +23,6 @@ const CATEGORIES = [
   { id: "respect", label: "Взаимное уважение и поддержка", color: "#C084FC", tip: "Границы, признание целей, опора в сложностях" },
 ];
 
-// Minimalistic inline icons (stroke currentColor / filled) to save bundle & avoid deps
-function CategoryIcon({ id, color }) {
-  const common = { width: 22, height: 22, strokeWidth: 1.6, stroke: 'currentColor', fill: 'none', vectorEffect: 'non-scaling-stroke' };
-  const col = { color };
-  switch (id) {
-    case 'trust': // shield-heart
-      return (
-        <div className="flex items-center justify-center" style={col} aria-hidden>
-          <svg {...common} viewBox="0 0 24 24">
-            <path d="M12 3l7 3v5.2c0 4.1-2.9 7.9-7 9-4.1-1.1-7-4.9-7-9V6l7-3z" />
-            <path d="M9.7 11.3a2.1 2.1 0 013-3 2.1 2.1 0 013 3L12.7 14a1 1 0 01-1.4 0l-1.6-1.6z" strokeLinejoin="round" />
-          </svg>
-        </div>
-      );
-    case 'friendship': // two users
-      return (
-        <div className="flex items-center justify-center" style={col} aria-hidden>
-          <svg {...common} viewBox="0 0 24 24">
-            <circle cx="8" cy="9" r="3" />
-            <circle cx="16" cy="9" r="3" />
-            <path d="M4.5 18a3.5 3.5 0 013.5-3.5h.5A3.5 3.5 0 0112 18" />
-            <path d="M12 18a3.5 3.5 0 013.5-3.5h.5A3.5 3.5 0 0119.5 18" />
-          </svg>
-        </div>
-      );
-    case 'passion': // heart / flame hybrid
-      return (
-        <div className="flex items-center justify-center" style={col} aria-hidden>
-          <svg {...common} viewBox="0 0 24 24">
-            <path d="M12.7 5.2a3.2 3.2 0 015.2 2.5c0 3.5-4 6.1-6.4 8.3-2.4-2.2-6.4-4.8-6.4-8.3A3.2 3.2 0 0110.3 5.2 3 3 0 0112 7a3 3 0 01.7-1.8z" />
-          </svg>
-        </div>
-      );
-    case 'adventure': // compass
-      return (
-        <div className="flex items-center justify-center" style={col} aria-hidden>
-          <svg {...common} viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M15.5 8.5l-2 5-5 2 2-5 5-2z" />
-            <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-          </svg>
-        </div>
-      );
-    case 'respect': // hands/support
-      return (
-        <div className="flex items-center justify-center" style={col} aria-hidden>
-          <svg {...common} viewBox="0 0 24 24">
-            <path d="M8 13l3 3 5-5" />
-            <path d="M5 8l4-4h6l4 4v6l-4 4H9l-4-4V8z" />
-          </svg>
-        </div>
-      );
-    default:
-      return null;
-  }
-}
-
 const defaultScale = { trust: 50, friendship: 50, passion: 50, adventure: 50, respect: 50 };
 
 // Built-in suggestion bank (shortened)
@@ -109,152 +52,15 @@ const BANK = {
 
 // ====== Visual helpers ======
 function Tube({ value, color, label }) {
-  // value: 0-100
-  const fillHeight = `${value}%`;
-  const glassGradient = 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0.12) 100%)';
-  const fillGradient = `linear-gradient(180deg, ${lighten(color,35)} 0%, ${lighten(color,10)} 35%, ${color} 85%, ${darken(color,12)} 100%)`;
   return (
     <div className="flex flex-col items-center gap-2">
-  <div className="relative h-40 w-14 rounded-[20px] border-2 border-neutral-300/70 bg-gradient-to-b from-neutral-200/50 to-neutral-100/20 backdrop-blur-sm shadow-sm overflow-hidden">
-        {/* Inner glass effect */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: glassGradient }} />
-        {/* Fill */}
-        <div
-          className="absolute bottom-0 left-0 right-0 transition-[height] duration-500 ease-out rounded-b-[16px]"
-          style={{ height: fillHeight, background: fillGradient, boxShadow: 'inset 0 2px 4px -2px rgba(255,255,255,0.8), inset 0 -3px 6px -2px rgba(0,0,0,0.25)' }}
-        />
-        {/* Vertical highlight */}
-        <div className="absolute inset-y-0 left-0 w-[38%] pointer-events-none mix-blend-screen" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)' }} />
-        {/* Bottom elliptical shine */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-6 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.05) 70%, transparent 75%)' }} />
+      <div className="relative h-40 w-14 rounded-t-xl border border-neutral-300 bg-white shadow-inner overflow-hidden">
+        <div className="absolute bottom-0 left-0 right-0 transition-all duration-500" style={{ height: `${value}%`, backgroundColor: color }} />
       </div>
-      <div className="text-xs text-neutral-600 text-center leading-tight px-1">{label}</div>
-  <div className="text-xs sm:text-sm font-bold tracking-tight text-neutral-700">{value}%</div>
+      <div className="text-xs text-neutral-600 text-center px-1">{label}</div>
+      <div className="text-xs font-medium">{value}%</div>
     </div>
   );
-}
-
-// Editable tubes for direct manipulation of player values
-function EditableTubes({ model, partner, avg, onChange, disabled }) {
-  const handleSet = useCallback((catId, clientY, rect) => {
-    const rel = 1 - (clientY - rect.top) / rect.height;
-    const percent = Math.max(0, Math.min(1, rel));
-    const v = Math.round(percent * 100);
-    onChange({ ...model, [catId]: v });
-  }, [model, onChange]);
-  const [hovered, setHovered] = useState(null);
-
-  const startDrag = (e, catId) => {
-    if (disabled) return;
-    e.preventDefault();
-    const target = e.currentTarget;
-    const rect = target.getBoundingClientRect();
-    const move = (ev) => {
-      const y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
-      handleSet(catId, y, rect);
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('touchmove', move);
-      window.removeEventListener('touchend', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('touchend', up);
-    // initial
-    move(e);
-  };
-
-  const handleKey = (e, catId) => {
-    if (disabled) return;
-    const delta = (e.key === 'ArrowUp') ? 1 : (e.key === 'ArrowDown') ? -1 : 0;
-    if (delta !== 0) {
-      e.preventDefault();
-      const next = Math.max(0, Math.min(100, (model[catId] ?? 0) + delta));
-      onChange({ ...model, [catId]: next });
-    }
-  };
-
-  return (
-  <div className="flex gap-4 md:gap-6 lg:gap-8 justify-between">
-      {CATEGORIES.map(c => {
-        const v = model[c.id];
-        return (
-          <div
-            key={c.id}
-      className="flex flex-col items-center gap-1 select-none w-16 relative"
-            aria-label={c.label}
-            onMouseEnter={() => setHovered(c.id)}
-            onMouseLeave={() => setHovered(h => h === c.id ? null : h)}
-            onFocus={() => setHovered(c.id)}
-            onBlur={() => setHovered(h => h === c.id ? null : h)}
-          >
-            {/* Tooltip */}
-            {hovered === c.id && (
-              <div className="absolute -top-28 left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ width: '168px' }}>
-                <div className="px-3 py-2 rounded-xl bg-white/95 backdrop-blur border shadow text-[10px] leading-tight space-y-1">
-                  <div className="text-[10px] font-semibold text-neutral-700 truncate">{c.label}</div>
-                  <div className="flex justify-between"><span className="text-neutral-500">Я</span><span className="font-medium">{v}%</span></div>
-                  <div className="flex justify-between"><span className="text-neutral-500">Партнёр</span><span className="font-medium">{partner?.[c.id]}%</span></div>
-                  <div className="flex justify-between"><span className="text-neutral-500">Среднее</span><span className="font-medium">{avg?.[c.id]}%</span></div>
-                </div>
-              </div>
-            )}
-            <button
-              type="button"
-              className={"relative h-40 w-16 rounded-[22px] border-2 transition-colors outline-none " + (disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer focus:ring-2 focus:ring-offset-1 focus:ring-neutral-400')}
-              style={{ borderColor: c.color + '80' }}
-              onPointerDown={(e)=>startDrag(e,c.id)}
-              onTouchStart={(e)=>startDrag(e,c.id)}
-              onKeyDown={(e)=>handleKey(e,c.id)}
-              role="slider"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={v}
-              aria-valuetext={`${v}%`}
-              tabIndex={disabled ? -1 : 0}
-            >
-              <div className="absolute inset-0 rounded-[22px] overflow-hidden">
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0.05) 70%, rgba(255,255,255,0.12) 100%)' }} />
-                <div
-                  className="absolute bottom-0 left-0 right-0 rounded-b-[20px] transition-[height] duration-300"
-                  style={{ height: v + '%', background: `linear-gradient(180deg, ${lighten(c.color,35)} 0%, ${lighten(c.color,10)} 35%, ${c.color} 85%, ${darken(c.color,12)} 100%)`, boxShadow: 'inset 0 2px 4px -2px rgba(255,255,255,0.8), inset 0 -3px 6px -2px rgba(0,0,0,0.25)' }}
-                >
-                  {v>0 && v<100 && (
-                    <>
-                      <div className="absolute -top-px left-0 right-0 h-px bg-black/25 mix-blend-multiply opacity-40" />
-                      <div className="absolute top-0 left-0 right-0 h-2 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0) 100%)' }} />
-                    </>
-                  )}
-                </div>
-                <div className="absolute inset-y-0 left-0 w-[38%] pointer-events-none mix-blend-screen" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.15) 60%, transparent 100%)' }} />
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-6 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.05) 70%, transparent 75%)' }} />
-              </div>
-            </button>
-            <div className="text-xs sm:text-sm font-bold text-neutral-800 leading-none">{v}%</div>
-            <div className="h-6 flex items-center justify-center" aria-hidden>
-              <CategoryIcon id={c.id} color={c.color} />
-              <span className="sr-only">{c.label}</span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// simple color helpers (no deps) — operate on hex colors like #RRGGBB
-function lighten(hex, pct) { return shift(hex, pct); }
-function darken(hex, pct) { return shift(hex, -pct); }
-function shift(hex, pct) {
-  if(!/^#?[0-9a-fA-F]{6}$/.test(hex||'')) return hex;
-  const h = hex.replace('#','');
-  const nums = [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
-  const f = (c)=> Math.max(0, Math.min(255, Math.round(c + (pct/100)*255)));
-  const out = nums.map(f).map(n=>n.toString(16).padStart(2,'0')).join('');
-  return '#'+out;
 }
 
 function SliderRow({ model, onChange }) {
@@ -287,36 +93,21 @@ function SliderRow({ model, onChange }) {
   );
 }
 
-function Suggestions({ items, onSend, onDelete }) {
-  // items: [{id?, title, desc, weight?, source, packId?, categoryId?}]
+function Suggestions({ items, onSend }) {
+  // items: [{title, desc, weight?}]
   const list = items || [];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
       {list.map((p, i) => (
-        <div key={p.id || i} className="group rounded-2xl border p-3 bg-white/80 shadow-sm flex flex-col justify-between relative">
-          {(p.source === 'generated' || p.source === 'custom') && (
-            <button
-              type="button"
-              onClick={() => onDelete?.(p)}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-neutral-400 hover:text-red-600 text-xs"
-              title="Удалить карточку"
-            >
-              ×
-            </button>
-          )}
+        <div key={i} className="rounded-2xl border p-3 bg-white/80 shadow-sm flex flex-col justify-between">
           <div>
             <div className="text-sm font-semibold mb-1 flex items-center gap-2">
               <span>{p.title}</span>
               {p.weight ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{p.weight}</span> : null}
             </div>
-            <div className="text-xs text-neutral-600 whitespace-pre-line">{p.desc}</div>
+            <div className="text-xs text-neutral-600">{p.desc}</div>
           </div>
-          <button
-            onClick={() => onSend(p)}
-            className="mt-3 inline-flex items-center justify-center text-sm font-semibold rounded-2xl px-4 py-3 bg-neutral-900 text-white active:scale-[0.99] disabled:opacity-40"
-          >
-            Отправить партнёру
-          </button>
+          <button onClick={() => onSend(p)} className="mt-3 inline-flex items-center justify-center text-sm font-semibold rounded-2xl px-4 py-3 bg-neutral-900 text-white active:scale-[0.99]">Отправить партнёру</button>
         </div>
       ))}
     </div>
@@ -588,7 +379,7 @@ export default function RelationshipLab() {
   const [myRole, setMyRole] = useState("A");
   const [A, setA] = useState({ ...defaultScale });
   const [B, setB] = useState({ ...defaultScale });
-  // Removed legacy lock feature (was {locked} state controlling editability)
+  // removed legacy locked state
 
   // inboxes
   const [inboxA, setInboxA] = useState([]);
@@ -609,7 +400,6 @@ export default function RelationshipLab() {
 
   // generated suggestions (per category)
   const [gen, setGen] = useState([]); // [{id,title,desc,weight,categoryId}]
-  const [remainingAI, setRemainingAI] = useState(null); // {trust: n,...}
 
   // toasts
   const [toasts, setToasts] = useState([]);
@@ -627,13 +417,12 @@ export default function RelationshipLab() {
 
   const me = player === "A" ? A : B;
   const setMe = player === "A" ? setA : setB;
-  const partner = player === "A" ? B : A;
   const myInbox = player === "A" ? inboxA : inboxB;
   const setMyInbox = player === "A" ? setInboxA : setInboxB;
   const partnerInbox = player === "A" ? inboxB : inboxA;
   const setPartnerInbox = player === "A" ? setInboxB : setInboxA;
 
-  const canEdit = true; // lock feature removed – always editable
+  const canEdit = true; // always editable now
 
   const clamp = useCallback(function clamp(v) {
     return Math.max(0, Math.min(100, v));
@@ -655,7 +444,7 @@ export default function RelationshipLab() {
         setB(s.B);
         setInboxA(s.inboxA);
         setInboxB(s.inboxB);
-  // legacy: s.locked ignored (feature removed)
+  // ignore s.locked (feature removed)
         setHistory(s.history || []);
         setPacks(s.packs || []);
         setGen(s.gen || []);
@@ -714,7 +503,7 @@ export default function RelationshipLab() {
       const load = (obj) => {
         if (obj.A) setA(obj.A);
         if (obj.B) setB(obj.B);
-  // if (obj.locked) ignored – lock removed
+  // if (obj.locked) ignored
         if (obj.inboxA) setInboxA(obj.inboxA);
         if (obj.inboxB) setInboxB(obj.inboxB);
         if (Array.isArray(obj.history)) setHistory(obj.history);
@@ -807,6 +596,15 @@ export default function RelationshipLab() {
     );
     setPacks(next);
     setCardForm({ title: "", desc: "", weight: 5 });
+    // добавляем созданную карточку также в быстрые подсказки для своей категории
+    const createdPack = next.find((p) => p.id === selectedPackId);
+    if (createdPack) {
+      const newest = createdPack.cards[0];
+      setGen((g) => [
+        { id: uid(), title: newest.title, desc: newest.desc, weight: newest.weight, categoryId: createdPack.categoryId },
+        ...g,
+      ]);
+    }
     sync.send({ type: "packs", payload: next });
   }, [selectedPackId, cardForm, packs]);
   const togglePackActive = useCallback(function togglePackActive(id) {
@@ -828,138 +626,26 @@ export default function RelationshipLab() {
   // Random suggestion → add to "cards & hints" list (not auto‑send)
   // Prevent immediate duplicates per category
   const lastGeneratedRef = useRef({});
-  const addRandomSuggestion = useCallback(async () => {
-    let card; let usedAI = false;
-    try {
-      const resp = await fetch('/api/generate-card?ts=' + Date.now(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryId: categoryForHints, weight: impact })
-      });
-      if (resp.status === 429) {
-        const data = await resp.json().catch(()=>({}));
-        // Локальный дневной лимит: просто сообщаем и выходим
-        if (data?.error === 'limit') {
-          notify('Лимит на сегодня', { type: 'warn', msg: data?.msg || '10 в день' });
-          try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
-          return;
-        }
-        // Upstream OpenAI 429 — не тратим локальную квоту, делаем локальный fallback
-        if (data?.error === 'upstream-429' || data?.error === 'OpenAI rate limit') {
-          let tries = 0; let local;
-          do {
-            local = generateCard(categoryForHints, impact + (tries>1?1:0));
-            tries++;
-          } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 4);
-          const fallbackCard = local;
-          lastGeneratedRef.current[categoryForHints] = fallbackCard.title;
-          setGen((g) => [{ id: uid(), ...fallbackCard, categoryId: categoryForHints }, ...g]);
-          notify('AI перегружен — локальная идея', { type: 'warn', msg: data?.msg || 'повторите позже' });
-          notify('Сгенерирована карточка', { type: 'success', msg: fallbackCard.title });
-          return;
-        }
-        // Непонятный 429 — обрабатываем как upstream и делаем fallback через catch
-        throw new Error('OpenAI 429');
-      }
-      if (resp.ok) {
-        const data = await resp.json();
-        card = { title: data.title, desc: data.desc, weight: data.weight };
-        usedAI = true;
-  // refresh remaining counts after successful consume
-  try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
-      } else {
-        let errMsg = 'AI ' + resp.status;
-        try {
-          const ej = await resp.json();
-          if (ej?.error) errMsg = ej.error + (ej.detail ? ': ' + ej.detail : '');
-        } catch {}
-        throw new Error(errMsg);
-      }
-    } catch (e) {
-      // fallback local
-      let tries = 0; let local;
-      do {
-        local = generateCard(categoryForHints, impact + (tries>1?1:0));
-        tries++;
-      } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 4);
-      card = local;
-      notify('AI недоступен — локальная идея', { type: 'warn', msg: String(e.message||'') });
-    }
-    if (!card) return;
+  const addRandomSuggestion = useCallback(() => {
+    let tries = 0;
+    let card;
+    do {
+      card = generateCard(categoryForHints, impact);
+      tries++;
+    } while (lastGeneratedRef.current[categoryForHints] === card.title && tries < 3);
     lastGeneratedRef.current[categoryForHints] = card.title;
     setGen((g) => [{ id: uid(), ...card, categoryId: categoryForHints }, ...g]);
-    notify(usedAI ? 'AI карточка' : 'Сгенерирована карточка', { type: 'success', msg: card.title });
+    notify("Сгенерирована карточка", { type: "success", msg: card.title });
   }, [categoryForHints, impact]);
-
-  // Fetch remaining limits once on mount
-  useEffect(() => {
-    (async () => {
-      try { const r = await fetch('/api/generate-card'); if(r.ok){ const j = await r.json(); setRemainingAI(j.remaining); } } catch {}
-    })();
-  }, []);
 
   // Compose visible suggestions list
   const suggestionsForUI = useMemo(() => {
-    const builtIn = (BANK[categoryForHints] || []).map(b => ({ ...b, source: 'builtin' }));
-    const customs = activeCustomCards.map((c) => ({ id: c.id, packId: c.packId, title: c.title, desc: c.desc, weight: c.weight, source: 'custom', categoryId: categoryForHints }));
-    const generated = gen.filter((x) => x.categoryId === categoryForHints).map(g => ({ ...g, source: 'generated' }));
-    // Order: custom (user), then generated, then built-in. Deduplicate by title+desc.
-    const all = [...customs, ...generated, ...builtIn];
-    const seen = new Set();
-    return all.filter(c => {
-      const key = (c.title + '|' + c.desc).toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const builtIn = BANK[categoryForHints] || [];
+    const customs = activeCustomCards.map((c) => ({ title: c.title, desc: c.desc, weight: c.weight }));
+    const generated = gen.filter((x) => x.categoryId === categoryForHints);
+    // новые сначала: generated, затем пользовательские, затем встроенные
+    return [...generated, ...customs, ...builtIn];
   }, [categoryForHints, activeCustomCards, gen]);
-
-  const handleDeleteSuggestion = useCallback((item) => {
-    if (item.source === 'generated') {
-      setGen(g => g.filter(x => x.id !== item.id));
-      notify('Удалена сгенерированная карточка', { type: 'warn', msg: item.title });
-    } else if (item.source === 'custom') {
-      setPacks(packs => packs.map(p => p.id === item.packId ? { ...p, cards: p.cards.filter(c => c.id !== item.id) } : p));
-      notify('Удалена пользовательская карточка', { type: 'warn', msg: item.title });
-    }
-  }, []);
-
-  // ====== Derived Statistics ======
-  // history entries: { id, week, categoryId, delta, from }
-  const stats = useMemo(() => {
-    const base = { A: { sent:0, accepted:0, totalWeight:0 }, B: { sent:0, accepted:0, totalWeight:0 } };
-    // Sent we infer from inbox merges + history origin (from field when card accepted)
-    // Counting sent: scan all current and past cards: history.from increments sent & accepted; inbox items from a player increment sent only.
-    const sentTemp = { A:0, B:0 };
-    inboxA.forEach(c=>{ if(c.from==='A') sentTemp.A++; if(c.from==='B') sentTemp.B++; });
-    inboxB.forEach(c=>{ if(c.from==='A') sentTemp.A++; if(c.from==='B') sentTemp.B++; });
-    history.forEach(h=>{ sentTemp[h.from] = (sentTemp[h.from]||0)+1; });
-    base.A.sent = sentTemp.A; base.B.sent = sentTemp.B;
-    history.forEach(h=>{ if(h.from==='A'){ base.A.accepted++; base.A.totalWeight += h.delta; } else if(h.from==='B'){ base.B.accepted++; base.B.totalWeight += h.delta; } });
-    return base;
-  }, [inboxA, inboxB, history]);
-
-  const [statsView, setStatsView] = useState('sent'); // sent | accepted | weight
-  const statsPairs = useMemo(()=>{
-    if (statsView==='sent') return { label:'Отправлено идей', A: stats.A.sent, B: stats.B.sent };
-    if (statsView==='accepted') return { label:'Принято идей', A: stats.A.accepted, B: stats.B.accepted };
-    return { label:'Суммарный вес', A: stats.A.totalWeight, B: stats.B.totalWeight };
-  }, [statsView, stats]);
-
-  function StatBar({ label, a, b }){
-    const total = (a+b)||1;
-    const pa = Math.round((a/total)*100);
-    const pb = 100-pa;
-    return (
-      <div className="space-y-1">
-        <div className="flex justify-between text-xs text-neutral-500"><span>{label}</span><span>{a} vs {b}</span></div>
-        <div className="h-4 w-full rounded-full bg-neutral-200 overflow-hidden flex text-[10px] font-semibold">
-          <div className="h-full bg-neutral-900 text-white flex items-center justify-center" style={{ width: pa+'%' }}>{pa>12? 'A '+pa+'%': ''}</div>
-          <div className="h-full bg-neutral-500/60 text-white flex items-center justify-center" style={{ width: pb+'%' }}>{pb>12? 'B '+pb+'%': ''}</div>
-        </div>
-      </div>
-    );
-  }
 
   // ====== UI ======
   const [showSync, setShowSync] = useState(false);
@@ -1015,25 +701,26 @@ export default function RelationshipLab() {
           </div>
         </header>
 
-  {/* Stats Block moved below inbox */}
-
-  {/* Average section removed (was id="avg") since interactive tubes below replace it */}
+        {/* Average */}
+        <section className="mb-6 sm:mb-8" id="avg">
+          <h2 className="text-base sm:text-lg font-semibold mb-3">Средний баланс</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {CATEGORIES.map((c) => (
+              <div key={c.id} className="flex flex-col items-center p-3 sm:p-4 rounded-2xl border bg-white">
+                <Tube value={avg[c.id]} color={c.color} label={c.label} />
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* My setup */}
         <section className="mb-8" id="base">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base sm:text-lg font-semibold">Базовая оценка — {player}</h2>
-            {/* Lock/Unlock button removed */}
-          </div>
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs text-neutral-500">Клик или потяни по колбе чтобы задать значение</div>
-            </div>
-            <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} />
+            {/* lock/unlock removed */}
           </div>
           <SliderRow model={me} onChange={(v) => setMe(v)} />
         </section>
-
 
         {/* Suggestions + weight */}
         <section className="mb-8" id="cards">
@@ -1054,47 +741,12 @@ export default function RelationshipLab() {
                   </option>
                 ))}
               </select>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={addRandomSuggestion}
-                  disabled={remainingAI && remainingAI[categoryForHints] === 0}
-                  className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${sendingPulse ? "ring-2 ring-green-400" : ""} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  {remainingAI ? `Случайно (${remainingAI[categoryForHints]})` : 'Случайно'}
-                </button>
-                {remainingAI && (
-                  <span className="text-[10px] px-2 py-1 rounded-full border bg-white" title="Осталось генераций на сегодня по категории">
-                    {remainingAI[categoryForHints]} / 10
-                  </span>
-                )}
-              </div>
+              <button onClick={addRandomSuggestion} className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${sendingPulse ? "ring-2 ring-green-400" : ""}`}>
+                Случайная карточка
+              </button>
             </div>
           </div>
-          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} />
-        </section>
-
-        {/* Contribution Stats (moved below cards) */}
-        <section className="mb-10" id="contrib-stats">
-          <div className="flex items-center gap-3 mb-3 flex-wrap">
-            <h2 className="text-base sm:text-lg font-semibold">Статистика вклада</h2>
-            <div className="flex gap-2 bg-white/80 rounded-2xl p-1 border">
-              {['sent','accepted','weight'].map(mode => (
-                <button key={mode} onClick={()=>setStatsView(mode)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${statsView===mode? 'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`}>{mode==='sent'?'Отправлено':mode==='accepted'?'Принято':'Вес'}</button>
-              ))}
-            </div>
-            <div className="text-xs text-neutral-500">A = вы ({myRole}), B = партнёр</div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label={statsPairs.label} a={statsPairs.A} b={statsPairs.B} />
-            </div>
-            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label="Принято идей" a={stats.A.accepted} b={stats.B.accepted} />
-            </div>
-            <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label="Суммарный вес" a={stats.A.totalWeight} b={stats.B.totalWeight} />
-            </div>
-          </div>
+          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} />
         </section>
 
         {/* Inbox */}
@@ -1133,7 +785,40 @@ export default function RelationshipLab() {
 
   {/* Rituals removed */}
 
-  {/* Old weekly stats removed in favor of new contribution stats above */}
+        {/* Stats */}
+        <section className="mb-12" id="stats">
+          <h2 className="text-base sm:text-lg font-semibold mb-3">Статистика по неделям</h2>
+          <div className="overflow-x-auto rounded-2xl border">
+            <table className="min-w-full text-xs sm:text-sm">
+              <thead>
+                <tr className="text-left bg-neutral-100">
+                  <th className="p-2 border">Неделя</th>
+                  {CATEGORIES.map((c) => (
+                    <th key={c.id} className="p-2 border">
+                      {c.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {getSortedWeeks(history).map(({ week, items }) => (
+                  <tr key={week}>
+                    <td className="p-2 border font-medium">{week}</td>
+                    {CATEGORIES.map((c) => (
+                      <td key={c.id} className="p-2 border align-top">{sumDelta(items, c.id)}</td>
+                    ))}
+                  </tr>
+                ))}
+                <tr className="bg-neutral-50 font-medium">
+                  <td className="p-2 border">Итого</td>
+                  {CATEGORIES.map((c) => (
+                    <td key={c.id} className="p-2 border">{sumDelta(history, c.id)}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         {/* Packs Editor */}
         <section className="mb-20" id="packs">
@@ -1264,12 +949,8 @@ export default function RelationshipLab() {
             </option>
           ))}
         </select>
-        <button
-          onClick={addRandomSuggestion}
-          disabled={remainingAI && remainingAI[categoryForHints]===0}
-          className={`px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white active:scale-[0.99] ${sendingPulse ? "ring-2 ring-green-400" : ""} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-        >
-          {remainingAI ? `Случайно (${remainingAI[categoryForHints]})` : 'Случайно'}
+        <button onClick={addRandomSuggestion} className={`px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white active:scale-[0.99] ${sendingPulse ? "ring-2 ring-green-400" : ""}`}>
+          Случайно
         </button>
 
         {/* Мобильные переключатели: экран и роль */}
