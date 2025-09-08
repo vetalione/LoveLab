@@ -543,11 +543,57 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   );
 }
 
-function Suggestions({ items, onSend, onDelete, activeCategoryId }) {
+function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, onGenerateAI }) {
   // items: [{id?, title, desc, weight?, source, packId?, categoryId?}]
   const list = items || [];
+  const [stage, setStage] = useState('idle'); // idle | weight | mode | manual
+  const [wChoice, setWChoice] = useState(10);
+  const [mtitle, setMtitle] = useState('');
+  const [mdesc, setMdesc] = useState('');
+  function reset(){ setStage('idle'); setMtitle(''); setMdesc(''); }
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* Desktop create card */}
+      <div className="hidden lg:flex rounded-2xl border border-dashed p-4 bg-white/60 backdrop-blur-sm shadow-sm flex-col justify-between min-h-[180px]">
+        {stage==='idle' && (
+          <button type="button" onClick={()=>setStage('weight')} className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500 hover:text-neutral-800">
+            <div className="w-14 h-14 rounded-2xl border-2 border-neutral-300 flex items-center justify-center text-3xl font-light">+</div>
+            <div className="text-sm font-medium">Создать карточку</div>
+          </button>
+        )}
+        {stage==='weight' && (
+          <div className="flex-1 flex flex-col">
+            <div className="text-xs font-semibold mb-2 text-neutral-500">Выберите вес</div>
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[1,5,10,15].map(w => (
+                <button key={w} onClick={()=>{setWChoice(w); setStage('mode');}} className={`py-2 rounded-xl text-sm font-semibold border ${wChoice===w? 'bg-neutral-900 text-white':'bg-white hover:bg-neutral-100'}`}>+{w}</button>
+              ))}
+            </div>
+            <button type="button" onClick={()=>reset()} className="mt-auto text-[11px] text-neutral-500 hover:text-neutral-700 self-start">Назад</button>
+          </div>
+        )}
+        {stage==='mode' && (
+          <div className="flex-1 flex flex-col">
+            <div className="text-xs font-semibold mb-3 text-neutral-500">Вес: <span className="font-bold">+{wChoice}</span></div>
+            <div className="flex flex-col gap-2 mb-3">
+              <button type="button" onClick={()=>{ onGenerateAI?.(wChoice); reset(); }} className="px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white active:scale-[0.98]">AI генерация</button>
+              <button type="button" onClick={()=>setStage('manual')} className="px-4 py-3 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100">Вручную</button>
+            </div>
+            <button type="button" onClick={()=>setStage('weight')} className="mt-auto text-[11px] text-neutral-500 hover:text-neutral-700 self-start">Назад</button>
+          </div>
+        )}
+        {stage==='manual' && (
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-xs text-neutral-500"><span>Вес</span><span className="font-semibold">+{wChoice}</span></div>
+            <input value={mtitle} onChange={e=>setMtitle(e.target.value)} placeholder="Заголовок" className="border rounded-xl px-2 py-1.5 text-xs" />
+            <textarea value={mdesc} onChange={e=>setMdesc(e.target.value)} placeholder="Описание" className="border rounded-xl px-2 py-1.5 text-[11px] resize-none h-20" />
+            <div className="mt-auto flex gap-2 pt-1">
+              <button disabled={!mtitle.trim()} onClick={()=>{ if(!mtitle.trim()) return; onAddManual?.(wChoice, mtitle.trim(), mdesc.trim()); reset(); }} className="flex-1 px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white disabled:opacity-40">Добавить</button>
+              <button type="button" onClick={()=>setStage('mode')} className="px-3 py-2 rounded-2xl text-xs font-semibold border bg-white">Назад</button>
+            </div>
+          </div>
+        )}
+      </div>
       {list.map((p, i) => (
   <div key={p.id || i} className="group rounded-2xl border p-3 pr-9 bg-white/80 shadow-sm flex flex-col justify-between relative">
           {(p.source === 'generated' || p.source === 'custom' || p.source === 'manual') && (
@@ -1049,13 +1095,13 @@ export default function RelationshipLab() {
   // Random suggestion → add to "cards & hints" list (not auto‑send)
   // Prevent immediate duplicates per category
   const lastGeneratedRef = useRef({});
-  const addRandomSuggestion = useCallback(async () => {
+  const addRandomSuggestion = useCallback(async (overrideWeight) => {
     let card; let usedAI = false;
     try {
       const resp = await fetch('/api/generate-card?ts=' + Date.now(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryId: categoryForHints, weight: impact })
+        body: JSON.stringify({ categoryId: categoryForHints, weight: overrideWeight ?? impact })
       });
       if (resp.status === 429) {
         const data = await resp.json().catch(()=>({}));
@@ -1069,7 +1115,7 @@ export default function RelationshipLab() {
         if (data?.error === 'upstream-429' || data?.error === 'OpenAI rate limit') {
           let tries = 0; let local;
           do {
-            local = generateCard(categoryForHints, impact + (tries>1?1:0));
+            local = generateCard(categoryForHints, (overrideWeight ?? impact) + (tries>1?1:0));
             tries++;
           } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 4);
           const fallbackCard = local;
@@ -1100,7 +1146,7 @@ export default function RelationshipLab() {
       // fallback local
       let tries = 0; let local;
       do {
-        local = generateCard(categoryForHints, impact + (tries>1?1:0));
+        local = generateCard(categoryForHints, (overrideWeight ?? impact) + (tries>1?1:0));
         tries++;
       } while (lastGeneratedRef.current[categoryForHints] === local.title && tries < 4);
       card = local;
@@ -1268,37 +1314,36 @@ export default function RelationshipLab() {
         <section className="mb-8" id="cards">
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
             <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">Ваши задания для: {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-sm px-3 py-1.5 rounded-full font-medium shadow-sm" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</span>); })()}</h2>
-            <div className="hidden lg:flex gap-2 items-center">
-              <select className="border rounded-2xl px-3 py-2 bg-white text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
-                {[1, 5, 10, 15].map((w) => (
-                  <option key={w} value={w}>+{w}</option>
-                ))}
+            {/* Mobile controls (desktop creation handled by new wizard tile) */}
+            <div className="flex gap-2 items-center lg:hidden">
+              <select className="border rounded-2xl px-2.5 py-1.5 bg-white text-xs" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
+                {[1,5,10,15].map(w => <option key={w} value={w}>+{w}</option>)}
               </select>
               <button
                 onClick={addRandomSuggestion}
                 disabled={remainingAI && remainingAI[categoryForHints] === 0}
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${sendingPulse ? 'ring-2 ring-green-400' : ''} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-              >
-                {remainingAI ? `AI (${remainingAI[categoryForHints]})` : 'AI'}
-              </button>
+                className={`px-3 py-1.5 rounded-2xl text-xs font-semibold border bg-white ${sendingPulse ? 'ring-2 ring-green-400' : ''} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-100'}`}
+              >{remainingAI ? `AI${remainingAI[categoryForHints]!==undefined?`(${remainingAI[categoryForHints]})`:''}` : 'AI'}</button>
               <button
                 onClick={()=> setShowCreate(s=>!s)}
-                className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100"
+                className="px-3 py-1.5 rounded-2xl text-xs font-semibold border bg-white hover:bg-neutral-100"
               >{showCreate? 'Закрыть' : 'Создать'}</button>
-              {remainingAI && (
-                <span className="text-[10px] px-2 py-1 rounded-full border bg-white" title="Осталось генераций на сегодня по категории">
-                  {remainingAI[categoryForHints]} / 10
-                </span>
-              )}
             </div>
           </div>
           {showCreate && (
-            <div className="mb-4 p-4 border rounded-2xl bg-white/80 flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row gap-2">
+            <div className="mb-4 p-4 border rounded-2xl bg-white/80 flex flex-col gap-3 lg:hidden">
+              <div className="flex flex-col gap-2">
                 <input className="flex-1 border rounded-2xl px-3 py-2 text-sm" placeholder="Заголовок" value={createForm.title} onChange={e=> setCreateForm(f=>({...f,title:e.target.value}))} />
-                <select className="border rounded-2xl px-3 py-2 text-sm w-28" value={createForm.weight} onChange={e=> setCreateForm(f=>({...f,weight:Number(e.target.value)}))}>
-                  {[1,5,10,15].map(w=> <option key={w} value={w}>+{w}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  <select className="border rounded-2xl px-3 py-2 text-sm w-28" value={createForm.weight} onChange={e=> setCreateForm(f=>({...f,weight:Number(e.target.value)}))}>
+                    {[1,5,10,15].map(w=> <option key={w} value={w}>+{w}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={()=>{ setImpact(createForm.weight); addRandomSuggestion(); }}
+                    className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100"
+                  >AI</button>
+                </div>
               </div>
               <textarea className="border rounded-2xl px-3 py-2 text-xs min-h-[70px]" placeholder="Описание (необязательно)" value={createForm.desc} onChange={e=> setCreateForm(f=>({...f,desc:e.target.value}))} />
               <div className="flex gap-2 flex-wrap items-center">
@@ -1313,16 +1358,22 @@ export default function RelationshipLab() {
                   disabled={!createForm.title.trim()}
                   className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40"
                 >Добавить</button>
-                <button
-                  type="button"
-                  onClick={()=>{ setImpact(createForm.weight); addRandomSuggestion(); }}
-                  className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100"
-                >AI генерация</button>
                 {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-xs px-2.5 py-0.5 rounded-full font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.15)' }}>{cat.label}</span>); })()}
               </div>
             </div>
           )}
-          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} activeCategoryId={categoryForHints} />
+          <Suggestions
+            items={suggestionsForUI}
+            onSend={handleSendSuggestion}
+            onDelete={handleDeleteSuggestion}
+            activeCategoryId={categoryForHints}
+            onAddManual={(weight,title,desc)=>{
+              const card = { id: uid(), title, desc, weight, categoryId: categoryForHints, source:'manual' };
+              setManual(m=>[card,...m]);
+              notify('Добавлена карточка', { type:'success', msg: card.title });
+            }}
+            onGenerateAI={(weight)=>{ addRandomSuggestion(weight); }}
+          />
         </section>
 
         {/* Contribution Stats (moved below cards) */}
