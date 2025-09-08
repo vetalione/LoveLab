@@ -175,6 +175,7 @@ function EditableTubes({ model, partner, avg, onChange, disabled, onSelectCatego
   if (disabled) return;
     e.preventDefault();
   if(onSelectCategory) onSelectCategory(catId);
+  try { if(window && window.dispatchEvent) window.dispatchEvent(new CustomEvent('lab-scroll-category',{ detail: catId })); } catch {}
     const target = e.currentTarget;
     const rect = target.getBoundingClientRect();
     const move = (ev) => {
@@ -238,7 +239,7 @@ function EditableTubes({ model, partner, avg, onChange, disabled, onSelectCatego
               onPointerDown={(e)=>!disabled && startDrag(e,c.id)}
               onTouchStart={(e)=>!disabled && startDrag(e,c.id)}
               onKeyDown={(e)=>!disabled && handleKey(e,c.id)}
-              onClick={()=> { if(disabled) return; if(onSelectCategory) onSelectCategory(c.id); }}
+              onClick={()=> { if(disabled) return; if(onSelectCategory) onSelectCategory(c.id); try { if(window && window.dispatchEvent) window.dispatchEvent(new CustomEvent('lab-scroll-category',{ detail: c.id })); } catch {} }}
               role="slider"
               aria-valuemin={0}
               aria-valuemax={100}
@@ -391,12 +392,18 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   const media = window.matchMedia('(max-width: 639px)');
   if(!media.matches) return; // skip attaching on desktop
     cont.addEventListener('scroll', handleScroll, { passive: true });
+    const handler = (e)=>{
+      const id = e.detail;
+      const el = cardRefs.current[id];
+      if(el) el.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+    };
+    window.addEventListener('lab-scroll-category', handler);
     let rAF;
     const onResize = () => { cancelAnimationFrame(rAF); rAF = requestAnimationFrame(handleScroll); };
     window.addEventListener('resize', onResize);
     // initial
     handleScroll();
-    return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); cancelAnimationFrame(rAF); };
+    return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); window.removeEventListener('lab-scroll-category', handler); cancelAnimationFrame(rAF); };
   }, [handleScroll]);
 
   const renderCard = (c, mobile=false) => {
