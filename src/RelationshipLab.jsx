@@ -543,7 +543,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   );
 }
 
-function Suggestions({ items, onSend, onDelete, activeCategoryId }) {
+function Suggestions({ items, onSend, onDelete, activeCategoryId, offlineHelp }) {
   // items: [{id?, title, desc, weight?, source, packId?, categoryId?}]
   const list = items || [];
   return (
@@ -569,7 +569,8 @@ function Suggestions({ items, onSend, onDelete, activeCategoryId }) {
             <div className="text-xs text-neutral-600 whitespace-pre-line">{p.desc}</div>
           </div>
           <button
-            onClick={() => onSend(p)}
+            onMouseEnter={() => { if(offlineHelp) offlineHelp(true); }}
+            onClick={() => { if(offlineHelp) offlineHelp(false); onSend(p); }}
             className="mt-3 inline-flex items-center justify-center text-sm font-semibold rounded-2xl px-4 py-3 bg-neutral-900 text-white active:scale-[0.99] disabled:opacity-40"
           >
             Предложить партнёру
@@ -879,6 +880,16 @@ export default function RelationshipLab() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }
 
+  // Helper: show instruction to connect partner (opens sync modal)
+  const lastHelpRef = useRef(0);
+  const showConnectHelp = useCallback((fromHover = false) => {
+    const now = Date.now();
+    if (fromHover && now - lastHelpRef.current < 4000) return; // throttle hover spam
+    lastHelpRef.current = now;
+    notify('Нужно подключить партнёра!', { type: 'warn', msg: '1) Нажмите «Онлайн‑синхронизация». 2) Хост: «Сгенерировать OFFER» и отправьте текст. 3) Партнёр вставляет OFFER, жмёт «Сгенерировать ANSWER» и отправляет вам. 4) Вставьте ANSWER и подтвердите.' });
+    setShowSync(true);
+  }, []);
+
   const avg = useMemo(() => {
     const o = {};
     for (const c of CATEGORIES) o[c.id] = Math.round((A[c.id] + B[c.id]) / 2);
@@ -1013,13 +1024,14 @@ export default function RelationshipLab() {
     setSendingPulse(true);
     await sleep(120);
     setSendingPulse(false);
-    if (sync.status !== "connected") {
-      notify("Партнёр офлайн", { type: "warn", msg: "Карточка сохранена локально." });
-    } else {
+    if (sync.status === "connected") {
       notify("Карточка отправлена", { type: "success" });
+    } else {
+      // Show extended instruction instead of simple offline note
+      showConnectHelp();
     }
     sync.send({ type: "card", payload });
-  }, [myRole, partnerInbox, setPartnerInbox, sync]);
+  }, [myRole, partnerInbox, setPartnerInbox, sync, showConnectHelp]);
 
   const handleSendSuggestion = useCallback((card) => {
     const withWeight = { ...card, weight: card.weight ?? impact };
@@ -1231,7 +1243,8 @@ export default function RelationshipLab() {
                 >Мои колбы</button>
                 <button
                   type="button"
-                  onClick={() => setTubeView('partner')}
+                  onMouseEnter={() => { if(sync.status !== 'connected') showConnectHelp(true); }}
+                  onClick={() => { if(sync.status !== 'connected'){ showConnectHelp(); return; } setTubeView('partner'); }}
                   className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='partner' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
                 >Колбы партнёра</button>
               </div>
@@ -1320,7 +1333,7 @@ export default function RelationshipLab() {
               </div>
             </div>
           )}
-          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} activeCategoryId={categoryForHints} />
+          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} activeCategoryId={categoryForHints} offlineHelp={(hover)=>{ if(sync.status!=='connected') showConnectHelp(hover); }} />
         </section>
 
         {/* Contribution Stats (moved below cards) */}
