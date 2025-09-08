@@ -296,8 +296,11 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   const cardRefs = useRef({});
   const suppressScrollSelectRef = useRef(false);
   // (debounce removed) immediate category selection on swipe
-  const swipePendingRef = useRef(null);
-  const swipeTimerRef = useRef(null);
+  // Scroll end detection refs
+  const bestIdRef = useRef(null);
+  const scrollEndRafRef = useRef(null);
+  const scrollCheckingRef = useRef(false);
+  const lastScrollPosRef = useRef(0);
 
   const testQuestions = useMemo(()=>{
     if(!testCat) return [];
@@ -391,13 +394,26 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       if(dist < bestDist){ bestDist = dist; bestId = c.id; }
     }
     if(suppressScrollSelectRef.current) return; // ignore during programmatic scroll
-    // store best and debounce to end of swipe (inactivity window)
-    swipePendingRef.current = bestId;
-    clearTimeout(swipeTimerRef.current);
-  swipeTimerRef.current = setTimeout(()=>{
-      const id = swipePendingRef.current;
-      if(id && id !== selectedCategory && onSelectCategory) onSelectCategory(id);
-  }, 48);
+    bestIdRef.current = bestId;
+    // start watching for scroll end (no position change for a frame)
+    if(!scrollCheckingRef.current){
+      scrollCheckingRef.current = true;
+      lastScrollPosRef.current = cont.scrollLeft;
+      const check = () => {
+        const pos = cont.scrollLeft;
+        if(pos === lastScrollPosRef.current){
+          // stable -> finalize selection
+            const id = bestIdRef.current;
+            if(id && id !== selectedCategory && onSelectCategory) onSelectCategory(id);
+            scrollCheckingRef.current = false;
+            scrollEndRafRef.current = null;
+            return;
+        }
+        lastScrollPosRef.current = pos;
+        scrollEndRafRef.current = requestAnimationFrame(check);
+      };
+      scrollEndRafRef.current = requestAnimationFrame(check);
+    }
   }, [onSelectCategory, selectedCategory]);
 
   useEffect(() => {
@@ -421,7 +437,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
     window.addEventListener('resize', onResize);
     // initial
     handleScroll();
-  return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); window.removeEventListener('lab-scroll-category', handler); cancelAnimationFrame(rAF); clearTimeout(swipeTimerRef.current); };
+  return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); window.removeEventListener('lab-scroll-category', handler); cancelAnimationFrame(rAF); if(scrollEndRafRef.current) cancelAnimationFrame(scrollEndRafRef.current); };
   }, [handleScroll]);
 
   const renderCard = (c, mobile=false) => {
