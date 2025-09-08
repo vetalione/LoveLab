@@ -134,8 +134,8 @@ function Tube({ value, color, label }) {
   );
 }
 
-// Editable tubes for direct manipulation of player values
-function EditableTubes({ model, partner, avg, onChange, disabled }) {
+// Editable tubes for direct manipulation of player values + category selection
+function EditableTubes({ model, partner, avg, onChange, disabled, onSelectCategory, selectedCategory }) {
   const handleSet = useCallback((catId, clientY, rect) => {
     const rel = 1 - (clientY - rect.top) / rect.height;
     const percent = Math.max(0, Math.min(1, rel));
@@ -147,6 +147,7 @@ function EditableTubes({ model, partner, avg, onChange, disabled }) {
   const startDrag = (e, catId) => {
     if (disabled) return;
     e.preventDefault();
+  if(onSelectCategory) onSelectCategory(catId);
     const target = e.currentTarget;
     const rect = target.getBoundingClientRect();
     const move = (ev) => {
@@ -174,6 +175,7 @@ function EditableTubes({ model, partner, avg, onChange, disabled }) {
       e.preventDefault();
       const next = Math.max(0, Math.min(100, (model[catId] ?? 0) + delta));
       onChange({ ...model, [catId]: next });
+  if(onSelectCategory) onSelectCategory(catId);
     }
   };
 
@@ -204,11 +206,12 @@ function EditableTubes({ model, partner, avg, onChange, disabled }) {
             )}
             <button
               type="button"
-              className={"relative h-40 w-16 rounded-[22px] border-2 transition-colors outline-none " + (disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer focus:ring-2 focus:ring-offset-1 focus:ring-neutral-400')}
+              className={"relative h-40 w-16 rounded-[22px] border-2 transition-colors outline-none " + (disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer focus:ring-2 focus:ring-offset-1 ' + (selectedCategory===c.id? 'ring-neutral-800 border-neutral-800' : 'focus:ring-neutral-400'))}
               style={{ borderColor: c.color + '80' }}
               onPointerDown={(e)=>startDrag(e,c.id)}
               onTouchStart={(e)=>startDrag(e,c.id)}
               onKeyDown={(e)=>handleKey(e,c.id)}
+              onClick={()=> { if(onSelectCategory) onSelectCategory(c.id); }}
               role="slider"
               aria-valuemin={0}
               aria-valuemax={100}
@@ -257,7 +260,7 @@ function shift(hex, pct) {
   return '#'+out;
 }
 
-function SliderRow({ model, onChange }) {
+function SliderRow({ model, onChange, onSelectCategory }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {CATEGORIES.map((c) => {
@@ -271,7 +274,7 @@ function SliderRow({ model, onChange }) {
               min={0}
               max={100}
               value={val}
-              onChange={(e) => onChange({ ...model, [c.id]: Number(e.target.value) })}
+              onChange={(e) => { onChange({ ...model, [c.id]: Number(e.target.value) }); if(onSelectCategory) onSelectCategory(c.id); }}
               className="w-full touch-none"
               style={{ '--c': c.color, '--p': `${val}%`, accentColor: c.color }}
             />
@@ -294,7 +297,7 @@ function Suggestions({ items, onSend, onDelete }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
       {list.map((p, i) => (
   <div key={p.id || i} className="group rounded-2xl border p-3 pr-9 bg-white/80 shadow-sm flex flex-col justify-between relative">
-          {(p.source === 'generated' || p.source === 'custom') && (
+          {(p.source === 'generated' || p.source === 'custom' || p.source === 'manual') && (
             <button
               type="button"
               onClick={() => onDelete?.(p)}
@@ -598,15 +601,15 @@ export default function RelationshipLab() {
   // generator settings
   const [categoryForHints, setCategoryForHints] = useState("trust");
   const [impact, setImpact] = useState(10); // +1/+5/+10/+15
+  const [manual, setManual] = useState([]); // manually created suggestions
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ title:'', desc:'', weight:10 });
+  // stats
+  const [history, setHistory] = useState([]); // {id, week, categoryId, delta, from}
 
-    // stats
-    const [history, setHistory] = useState([]); // {id, week, categoryId, delta, from}
+  // (history state moved above – keep comment anchor)
 
-  // custom packs
-  const [packs, setPacks] = useState([]); // {id, name, categoryId, active, cards:[{id,title,desc,weight}]}
-  const [packForm, setPackForm] = useState({ name: "", categoryId: "trust" });
-  const [cardForm, setCardForm] = useState({ title: "", desc: "", weight: 5 });
-  const [selectedPackId, setSelectedPackId] = useState(null);
+  // packs removed
 
   // generated suggestions (per category)
   const [gen, setGen] = useState([]); // [{id,title,desc,weight,categoryId}]
@@ -657,8 +660,7 @@ export default function RelationshipLab() {
         setInboxA(s.inboxA);
         setInboxB(s.inboxB);
   // legacy: s.locked ignored (feature removed)
-        setHistory(s.history || []);
-        setPacks(s.packs || []);
+  setHistory(s.history || []);
         setGen(s.gen || []);
         setTimeout(() => (applyingRemoteRef.current = false), 50);
       } else if (msg.type === "card") {
@@ -679,8 +681,6 @@ export default function RelationshipLab() {
         setInboxA((l) => l.filter((x) => x.id !== id));
         setInboxB((l) => l.filter((x) => x.id !== id));
         notify("Карточка отклонена", { type: "warn" });
-      } else if (msg.type === "packs") {
-        setPacks(msg.payload);
       }
     } catch {}
   });
@@ -689,7 +689,7 @@ export default function RelationshipLab() {
   const lastSentRef = useRef("");
   useEffect(() => {
     if (applyingRemoteRef.current) return;
-  const payload = { A, B, inboxA, inboxB, history, packs, gen }; // locked removed
+  const payload = { A, B, inboxA, inboxB, history, gen }; // locked removed
     const json = JSON.stringify(payload);
     if (json === lastSentRef.current) return; // unchanged
     const t = setTimeout(() => {
@@ -697,7 +697,7 @@ export default function RelationshipLab() {
       sync.send({ type: "state", payload });
     }, 150); // debounce
     return () => clearTimeout(t);
-  }, [A, B, inboxA, inboxB, history, packs, gen]);
+  }, [A, B, inboxA, inboxB, history, gen]);
 
   // ====== Persist to localStorage ======
   // ====== Local persistence with version & debounce ======
@@ -719,8 +719,7 @@ export default function RelationshipLab() {
         if (obj.inboxA) setInboxA(obj.inboxA);
         if (obj.inboxB) setInboxB(obj.inboxB);
         if (Array.isArray(obj.history)) setHistory(obj.history);
-        if (Array.isArray(obj.packs)) setPacks(obj.packs);
-        if (Array.isArray(obj.gen)) setGen(obj.gen);
+  if (Array.isArray(obj.gen)) setGen(obj.gen);
       };
       if (ver === 1) {
         // strip rituals and rewrite
@@ -733,7 +732,7 @@ export default function RelationshipLab() {
     } catch {}
   }, []);
   useEffect(() => {
-  const state = { A, B, inboxA, inboxB, history, packs, gen, __v: STORAGE_VERSION }; // locked removed
+  const state = { A, B, inboxA, inboxB, history, gen, __v: STORAGE_VERSION }; // locked removed
     const json = JSON.stringify(state);
     if (json === lastSavedRef.current) return;
     clearTimeout(saveTimerRef.current);
@@ -742,7 +741,7 @@ export default function RelationshipLab() {
       try { localStorage.setItem(STORAGE_KEY, json); } catch {}
     }, 250);
     return () => clearTimeout(saveTimerRef.current);
-  }, [A, B, inboxA, inboxB, history, packs, gen]);
+  }, [A, B, inboxA, inboxB, history, gen]);
 
   // ====== Actions ======
   const [sendingPulse, setSendingPulse] = useState(false);
@@ -782,49 +781,8 @@ export default function RelationshipLab() {
     sync.send({ type: "decline", payload: { id: item.id } });
   }, [setMyInbox]);
 
-  // Packs CRUD
-  const createPack = useCallback(function createPack() {
-    if (!packForm.name.trim()) return;
-    const p = { id: uid(), name: packForm.name.trim(), categoryId: packForm.categoryId, active: true, cards: [] };
-    const next = [p, ...packs];
-    setPacks(next);
-    setSelectedPackId(p.id);
-    setPackForm({ name: "", categoryId: packForm.categoryId });
-    sync.send({ type: "packs", payload: next });
-  }, [packForm, packs]);
-  const addCardToPack = useCallback(function addCardToPack() {
-    if (!selectedPackId) return;
-    if (!cardForm.title.trim()) return;
-    const next = packs.map((p) =>
-      p.id === selectedPackId
-        ? {
-            ...p,
-            cards: [
-              { id: uid(), title: cardForm.title.trim(), desc: cardForm.desc.trim(), weight: Number(cardForm.weight) || 1 },
-              ...p.cards,
-            ],
-          }
-        : p
-    );
-    setPacks(next);
-    setCardForm({ title: "", desc: "", weight: 5 });
-    sync.send({ type: "packs", payload: next });
-  }, [selectedPackId, cardForm, packs]);
-  const togglePackActive = useCallback(function togglePackActive(id) {
-    const next = packs.map((p) => (p.id === id ? { ...p, active: !p.active } : p));
-    setPacks(next);
-    sync.send({ type: "packs", payload: next });
-  }, [packs]);
-  const sendFromPack = useCallback((card, categoryId) => { sendCardToPartner(card, categoryId); }, [sendCardToPartner]);
-
-  // Derived: active custom cards for current category
-  const activeCustomCards = useMemo(
-    () =>
-      packs
-        .filter((p) => p.active && p.categoryId === categoryForHints)
-        .flatMap((p) => p.cards.map((c) => ({ ...c, packId: p.id }))),
-    [packs, categoryForHints]
-  );
+  // Packs feature removed
+  // All packs logic fully removed; no custom packs.
 
   // Random suggestion → add to "cards & hints" list (not auto‑send)
   // Prevent immediate duplicates per category
@@ -902,28 +860,28 @@ export default function RelationshipLab() {
   // Compose visible suggestions list
   const suggestionsForUI = useMemo(() => {
     const builtIn = (BANK[categoryForHints] || []).map(b => ({ ...b, source: 'builtin' }));
-    const customs = activeCustomCards.map((c) => ({ id: c.id, packId: c.packId, title: c.title, desc: c.desc, weight: c.weight, source: 'custom', categoryId: categoryForHints }));
     const generated = gen.filter((x) => x.categoryId === categoryForHints).map(g => ({ ...g, source: 'generated' }));
-    // Order: custom (user), then generated, then built-in. Deduplicate by title+desc.
-    const all = [...customs, ...generated, ...builtIn];
+    const manualCards = manual.filter(m => m.categoryId === categoryForHints).map(m => ({ ...m, source: 'manual' }));
+    // Order: manual, generated, built-in. Deduplicate by title+desc.
+    const ordered = [...manualCards, ...generated, ...builtIn];
     const seen = new Set();
-    return all.filter(c => {
-      const key = (c.title + '|' + c.desc).toLowerCase();
+    return ordered.filter(c => {
+      const key = (c.title + '\n' + (c.desc||'')).toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-  }, [categoryForHints, activeCustomCards, gen]);
+  }, [categoryForHints, gen, manual]);
 
   const handleDeleteSuggestion = useCallback((item) => {
     if (item.source === 'generated') {
       setGen(g => g.filter(x => x.id !== item.id));
-      notify('Удалена сгенерированная карточка', { type: 'warn', msg: item.title });
-    } else if (item.source === 'custom') {
-      setPacks(packs => packs.map(p => p.id === item.packId ? { ...p, cards: p.cards.filter(c => c.id !== item.id) } : p));
-      notify('Удалена пользовательская карточка', { type: 'warn', msg: item.title });
+      notify('Удалена AI карточка', { type: 'warn', msg: item.title });
+    } else if (item.source === 'manual') {
+      setManual(m => m.filter(x => x.id !== item.id));
+      notify('Удалена созданная карточка', { type: 'warn', msg: item.title });
     }
-  }, []);
+  }, [setGen, setManual]);
 
   // ====== Derived Statistics (overall + per category) ======
   // history entries: { id, week, categoryId, delta, from }
@@ -1041,47 +999,70 @@ export default function RelationshipLab() {
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs text-neutral-500">Клик или потяни по колбе чтобы задать значение</div>
             </div>
-            <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} />
+            <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} onSelectCategory={(id)=> setCategoryForHints(id)} selectedCategory={categoryForHints} />
           </div>
-          <SliderRow model={me} onChange={(v) => setMe(v)} />
+          <SliderRow model={me} onChange={(v) => setMe(v)} onSelectCategory={(id)=> setCategoryForHints(id)} />
         </section>
 
 
         {/* Suggestions + weight */}
         <section className="mb-8" id="cards">
-          <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-            <h2 className="text-base sm:text-lg font-semibold">Карточки‑подсказки</h2>
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">Карточки‑подсказки <span className="text-xs px-2 py-1 rounded-full border bg-white font-normal">{CATEGORIES.find(c=>c.id===categoryForHints)?.label}</span></h2>
             <div className="hidden lg:flex gap-2 items-center">
-              <select className="border rounded-2xl px-3 py-2 bg-white text-sm" value={categoryForHints} onChange={(e) => setCategoryForHints(e.target.value)}>
-                {CATEGORIES.map((c) => (
-                  <option value={c.id} key={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
               <select className="border rounded-2xl px-3 py-2 bg-white text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
                 {[1, 5, 10, 15].map((w) => (
-                  <option key={w} value={w}>
-                    +{w}
-                  </option>
+                  <option key={w} value={w}>+{w}</option>
                 ))}
               </select>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={addRandomSuggestion}
-                  disabled={remainingAI && remainingAI[categoryForHints] === 0}
-                  className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${sendingPulse ? "ring-2 ring-green-400" : ""} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  {remainingAI ? `Случайно (${remainingAI[categoryForHints]})` : 'Случайно'}
-                </button>
-                {remainingAI && (
-                  <span className="text-[10px] px-2 py-1 rounded-full border bg-white" title="Осталось генераций на сегодня по категории">
-                    {remainingAI[categoryForHints]} / 10
-                  </span>
-                )}
-              </div>
+              <button
+                onClick={addRandomSuggestion}
+                disabled={remainingAI && remainingAI[categoryForHints] === 0}
+                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${sendingPulse ? 'ring-2 ring-green-400' : ''} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                {remainingAI ? `AI (${remainingAI[categoryForHints]})` : 'AI'}
+              </button>
+              <button
+                onClick={()=> setShowCreate(s=>!s)}
+                className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100"
+              >{showCreate? 'Закрыть' : 'Создать'}</button>
+              {remainingAI && (
+                <span className="text-[10px] px-2 py-1 rounded-full border bg-white" title="Осталось генераций на сегодня по категории">
+                  {remainingAI[categoryForHints]} / 10
+                </span>
+              )}
             </div>
           </div>
+          {showCreate && (
+            <div className="mb-4 p-4 border rounded-2xl bg-white/80 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input className="flex-1 border rounded-2xl px-3 py-2 text-sm" placeholder="Заголовок" value={createForm.title} onChange={e=> setCreateForm(f=>({...f,title:e.target.value}))} />
+                <select className="border rounded-2xl px-3 py-2 text-sm w-28" value={createForm.weight} onChange={e=> setCreateForm(f=>({...f,weight:Number(e.target.value)}))}>
+                  {[1,5,10,15].map(w=> <option key={w} value={w}>+{w}</option>)}
+                </select>
+              </div>
+              <textarea className="border rounded-2xl px-3 py-2 text-xs min-h-[70px]" placeholder="Описание (необязательно)" value={createForm.desc} onChange={e=> setCreateForm(f=>({...f,desc:e.target.value}))} />
+              <div className="flex gap-2 flex-wrap items-center">
+                <button
+                  onClick={()=>{
+                    if(!createForm.title.trim()) return;
+                    const card = { id: uid(), title: createForm.title.trim(), desc: createForm.desc.trim(), weight: createForm.weight, categoryId: categoryForHints, source:'manual' };
+                    setManual(m=>[card,...m]);
+                    setCreateForm(f=>({...f,title:'',desc:''}));
+                    notify('Добавлена карточка', { type:'success', msg: card.title });
+                  }}
+                  disabled={!createForm.title.trim()}
+                  className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40"
+                >Добавить</button>
+                <button
+                  type="button"
+                  onClick={()=>{ setImpact(createForm.weight); addRandomSuggestion(); }}
+                  className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100"
+                >AI генерация</button>
+                <span className="text-[10px] text-neutral-500">Категория: {CATEGORIES.find(c=>c.id===categoryForHints)?.label}</span>
+              </div>
+            </div>
+          )}
           <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} />
         </section>
 
@@ -1151,110 +1132,7 @@ export default function RelationshipLab() {
   {/* Old weekly stats removed in favor of new contribution stats above */}
 
         {/* Packs Editor */}
-        <section className="mb-20" id="packs">
-          <h2 className="text-base sm:text-lg font-semibold mb-3">Редактор карточек и паков</h2>
-          <div className="p-4 border rounded-2xl bg-white mb-4">
-            <div className="text-sm font-semibold mb-2">Создать пак</div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                className="flex-1 border rounded-2xl px-4 py-3 text-sm"
-                placeholder="Название пака"
-                value={packForm.name}
-                onChange={(e) => setPackForm({ ...packForm, name: e.target.value })}
-              />
-              <select
-                className="border rounded-2xl px-4 py-3 text-sm"
-                value={packForm.categoryId}
-                onChange={(e) => setPackForm({ ...packForm, categoryId: e.target.value })}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <button onClick={createPack} className="px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white active:scale-[0.99]">
-                Создать
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {packs.map((p) => (
-              <div key={p.id} className="p-4 border rounded-2xl bg-white">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-semibold text-sm">
-                    {p.name}{" "}
-                    <span className="text-neutral-400">· {CATEGORIES.find((c) => c.id === p.categoryId)?.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs flex items-center gap-1">
-                      <input type="checkbox" className="w-5 h-5" checked={p.active} onChange={() => togglePackActive(p.id)} /> активен
-                    </label>
-                    <button
-                      onClick={() => setSelectedPackId(p.id)}
-                      className={`px-3 py-2 rounded-2xl text-xs border ${selectedPackId === p.id ? "bg-neutral-900 text-white" : "bg-white"}`}
-                    >
-                      Редактировать
-                    </button>
-                  </div>
-                </div>
-                <ul className="space-y-2 text-sm">
-                  {p.cards.length === 0 && <li className="text-neutral-400">Пока нет карточек</li>}
-                  {p.cards.map((c) => (
-                    <li key={c.id} className="border rounded-2xl p-3 flex items-start justify-between">
-                      <div>
-                        <div className="font-medium flex items-center gap-2">
-                          {c.title}{" "}
-                          {c.weight ? (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{c.weight}</span>
-                          ) : null}
-                        </div>
-                        {c.desc && <div className="text-xs text-neutral-600">{c.desc}</div>}
-                      </div>
-                      <button
-                        onClick={() => sendFromPack({ title: c.title, desc: c.desc, weight: c.weight }, p.categoryId)}
-                        className="ml-3 px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white active:scale-[0.99]"
-                      >
-                        Отправить
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {selectedPackId === p.id && (
-                  <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                    <input
-                      className="flex-1 border rounded-2xl px-4 py-3 text-sm"
-                      placeholder="Заголовок карточки"
-                      value={cardForm.title}
-                      onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })}
-                    />
-                    <input
-                      className="flex-1 border rounded-2xl px-4 py-3 text-sm"
-                      placeholder="Описание (необязательно)"
-                      value={cardForm.desc}
-                      onChange={(e) => setCardForm({ ...cardForm, desc: e.target.value })}
-                    />
-                    <select
-                      className="border rounded-2xl px-4 py-3 text-sm"
-                      value={cardForm.weight}
-                      onChange={(e) => setCardForm({ ...cardForm, weight: Number(e.target.value) })}
-                    >
-                      {[1, 5, 10, 15].map((w) => (
-                        <option key={w} value={w}>
-                          Вес +{w}
-                        </option>
-                      ))}
-                    </select>
-                    <button onClick={addCardToPack} className="px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white active:scale-[0.99]">
-                      Добавить
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
+  {/* Packs editor removed */}
 
         <footer className="hidden lg:block text-xs text-neutral-500 space-y-2 pb-10">
           <p>⚖️ Балансируйте «пробирки»: если одна растёт слишком быстро, отправляйте карточки в соседние области.</p>
@@ -1264,14 +1142,8 @@ export default function RelationshipLab() {
 
       {/* Mobile bottom action bar */}
       <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 flex items-center gap-2 overflow-x-auto">
-        {/* Категория и вес */}
-        <select className="min-w-[9rem] flex-1 border rounded-2xl px-3 py-2 text-sm" value={categoryForHints} onChange={(e) => setCategoryForHints(e.target.value)}>
-          {CATEGORIES.map((c) => (
-            <option value={c.id} key={c.id}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+  {/* Категория выбирается по взаимодействию с пробиркой / слайдером */}
+  <div className="text-[10px] px-2 py-1 rounded-full border bg-white whitespace-nowrap">{CATEGORIES.find(c=>c.id===categoryForHints)?.label}</div>
         <select className="w-20 border rounded-2xl px-3 py-2 text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
           {[1, 5, 10, 15].map((w) => (
             <option key={w} value={w}>
