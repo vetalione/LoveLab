@@ -453,10 +453,12 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       <div
         key={c.id}
         ref={(el)=>{ if(mobile) cardRefs.current[c.id]=el; }}
-  className={`card-blur-border p-4 rounded-2xl border border-neutral-200 bg-white/70 backdrop-blur shadow-sm relative ${mobile? 'flex-shrink-0 w-[88vw] snap-center':'w-full'} ${selectedCategory===c.id? 'card-selected':''}`}
+        className={`p-4 rounded-2xl border shadow-sm relative overflow-hidden z-0 before:content-[''] before:absolute before:inset-0 before:rounded-2xl before:bg-white/55 before:backdrop-blur-sm before:pointer-events-none before:z-0 ${mobile? 'flex-shrink-0 w-[88vw] snap-center':'w-full'} ${selectedCategory===c.id? 'ring-1 ring-neutral-800':''}`}
+        style={{ WebkitMaskImage: 'linear-gradient(#000,#000)' }}
       >
-        <div className="text-sm font-semibold mb-1">{c.label}</div>
-        <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
+        <div className="relative z-10">
+          <div className="text-sm font-semibold mb-1">{c.label}</div>
+          <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
         <input
           type="range"
           min={0}
@@ -485,6 +487,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
           >
             Пройти тест
           </button>
+        </div>
         </div>
       </div>
     );
