@@ -1417,9 +1417,9 @@ export default function RelationshipLab() {
 
       {/* Mobile bottom action bar */}
       <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 flex items-center justify-between gap-3 overflow-x-auto">
-        <button type="button" onClick={()=>{ setShowMobileWizard(true); setMobileStage('weight'); }} className="relative px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1">
-          <span className="absolute -inset-[2px] rounded-2xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] opacity-50 animate-[pulse_3s_ease-in-out_infinite] blur-[2px]"></span>
-          <span className="relative">✨ Задание от ИИ</span>
+        <button type="button" onClick={()=>{ setShowMobileWizard(true); setMobileStage('weight'); }} className="ai-glow-btn relative px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1">
+          <span className="ai-glow-overlay absolute -inset-[2px] rounded-2xl"></span>
+          <span className="relative flex items-center gap-1"><span className="animate-pulse-spark">✨</span><span>Задание от ИИ</span></span>
         </button>
         <div className="ml-auto">{(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<div className="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 3px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</div>); })()}</div>
       </div>
