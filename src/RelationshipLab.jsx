@@ -572,7 +572,7 @@ function Suggestions({ items, onSend, onDelete }) {
             onClick={() => onSend(p)}
             className="mt-3 inline-flex items-center justify-center text-sm font-semibold rounded-2xl px-4 py-3 bg-neutral-900 text-white active:scale-[0.99] disabled:opacity-40"
           >
-            Отправить партнёру
+            Предложить партнёру
           </button>
         </div>
       ))}
@@ -1295,7 +1295,7 @@ export default function RelationshipLab() {
         {/* Suggestions + weight */}
         <section className="mb-8" id="cards">
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">Карточки‑подсказки {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-sm px-3 py-1.5 rounded-full font-medium shadow-sm" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</span>); })()}</h2>
+            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">Ваши задания для: {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-sm px-3 py-1.5 rounded-full font-medium shadow-sm" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</span>); })()}</h2>
             <div className="hidden lg:flex gap-2 items-center">
               <select className="border rounded-2xl px-3 py-2 bg-white text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
                 {[1, 5, 10, 15].map((w) => (
