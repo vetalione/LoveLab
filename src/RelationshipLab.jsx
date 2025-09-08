@@ -559,7 +559,7 @@ function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, o
           <button type="button" onClick={()=>setStage('weight')} className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500 hover:text-neutral-800">
             <div className="relative">
               <div className="absolute -inset-1 rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[spin_8s_linear_infinite] opacity-70 blur-[1px]"></div>
-              <div className="absolute -inset-1 rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[pulse_3s_ease-in-out_infinite] opacity-40 blur-md"></div>
+              {/* removed pulse layer */}
               <div className="relative w-14 h-14 rounded-2xl border-2 border-neutral-300 flex items-center justify-center text-3xl font-light bg-white/90">+</div>
             </div>
             <div className="text-sm font-medium">✨ Сгенерировать идею от ИИ</div>
@@ -583,7 +583,7 @@ function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, o
             <div className="flex flex-col gap-2 mb-3">
               <div className="relative">
                 <div className="absolute -inset-[2px] rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[spin_8s_linear_infinite] opacity-70 blur-[1px]"></div>
-                <div className="absolute -inset-[2px] rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[pulse_3s_ease-in-out_infinite] opacity-40 blur-md"></div>
+                {/* removed pulse layer */}
                 <button type="button" onClick={()=>{ onGenerateAI?.(wChoice); reset(); }} className="relative w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white active:scale-[0.98]">AI генерация</button>
               </div>
               <button type="button" onClick={()=>setStage('manual')} className="px-4 py-3 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100">Вручную</button>
@@ -913,8 +913,13 @@ export default function RelationshipLab() {
   const [categoryForHints, setCategoryForHints] = useState("trust");
   const [impact, setImpact] = useState(10); // +1/+5/+10/+15
   const [manual, setManual] = useState([]); // manually created suggestions
-  const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ title:'', desc:'', weight:10 });
+  // Mobile creation wizard state (desktop handled inside Suggestions component)
+  const [mobileStage, setMobileStage] = useState('idle'); // idle | weight | mode | manual
+  const [mobileWeight, setMobileWeight] = useState(10);
+  const [mobileTitle, setMobileTitle] = useState('');
+  const [mobileDesc, setMobileDesc] = useState('');
+  const [showMobileWizard, setShowMobileWizard] = useState(false);
+  function resetMobile(){ setMobileStage('idle'); setMobileTitle(''); setMobileDesc(''); setShowMobileWizard(false); }
   // stats
   const [history, setHistory] = useState([]); // {id, week, categoryId, delta, from}
 
@@ -1323,54 +1328,9 @@ export default function RelationshipLab() {
         <section className="mb-8" id="cards">
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
             <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">Ваши задания для: {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-sm px-3 py-1.5 rounded-full font-medium shadow-sm" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</span>); })()}</h2>
-            {/* Mobile controls (desktop creation handled by new wizard tile) */}
-            <div className="flex gap-2 items-center lg:hidden">
-              <select className="border rounded-2xl px-2.5 py-1.5 bg-white text-xs" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
-                {[1,5,10,15].map(w => <option key={w} value={w}>+{w}</option>)}
-              </select>
-              <button
-                onClick={addRandomSuggestion}
-                disabled={remainingAI && remainingAI[categoryForHints] === 0}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-semibold border bg-white ${sendingPulse ? 'ring-2 ring-green-400' : ''} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-100'}`}
-              >{remainingAI ? `AI${remainingAI[categoryForHints]!==undefined?`(${remainingAI[categoryForHints]})`:''}` : 'AI'}</button>
-              <button
-                onClick={()=> setShowCreate(s=>!s)}
-                className="px-3 py-1.5 rounded-2xl text-xs font-semibold border bg-white hover:bg-neutral-100"
-              >{showCreate? 'Закрыть' : 'Создать'}</button>
-            </div>
+            {/* Mobile creation wizard removed per request; no controls here now */}
           </div>
-          {showCreate && (
-            <div className="mb-4 p-4 border rounded-2xl bg-white/80 flex flex-col gap-3 lg:hidden">
-              <div className="flex flex-col gap-2">
-                <input className="flex-1 border rounded-2xl px-3 py-2 text-sm" placeholder="Заголовок" value={createForm.title} onChange={e=> setCreateForm(f=>({...f,title:e.target.value}))} />
-                <div className="flex gap-2">
-                  <select className="border rounded-2xl px-3 py-2 text-sm w-28" value={createForm.weight} onChange={e=> setCreateForm(f=>({...f,weight:Number(e.target.value)}))}>
-                    {[1,5,10,15].map(w=> <option key={w} value={w}>+{w}</option>)}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={()=>{ setImpact(createForm.weight); addRandomSuggestion(); }}
-                    className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100"
-                  >AI</button>
-                </div>
-              </div>
-              <textarea className="border rounded-2xl px-3 py-2 text-xs min-h-[70px]" placeholder="Описание (необязательно)" value={createForm.desc} onChange={e=> setCreateForm(f=>({...f,desc:e.target.value}))} />
-              <div className="flex gap-2 flex-wrap items-center">
-                <button
-                  onClick={()=>{
-                    if(!createForm.title.trim()) return;
-                    const card = { id: uid(), title: createForm.title.trim(), desc: createForm.desc.trim(), weight: createForm.weight, categoryId: categoryForHints, source:'manual' };
-                    setManual(m=>[card,...m]);
-                    setCreateForm(f=>({...f,title:'',desc:''}));
-                    notify('Добавлена карточка', { type:'success', msg: card.title });
-                  }}
-                  disabled={!createForm.title.trim()}
-                  className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40"
-                >Добавить</button>
-                {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-xs px-2.5 py-0.5 rounded-full font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.15)' }}>{cat.label}</span>); })()}
-              </div>
-            </div>
-          )}
+          {/* Mobile wizard occupies inline area above list when active (no separate panel) */}
           <Suggestions
             items={suggestionsForUI}
             onSend={handleSendSuggestion}
@@ -1456,35 +1416,61 @@ export default function RelationshipLab() {
       </div>
 
       {/* Mobile bottom action bar */}
-      <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 flex items-center gap-2 overflow-x-auto">
-  {/* Категория выбирается по взаимодействию с пробиркой / слайдером */}
-  {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<div className="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 3px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</div>); })()}
-        <select className="w-20 border rounded-2xl px-3 py-2 text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
-          {[1, 5, 10, 15].map((w) => (
-            <option key={w} value={w}>
-              +{w}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={addRandomSuggestion}
-          disabled={remainingAI && remainingAI[categoryForHints]===0}
-          className={`px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white active:scale-[0.99] ${sendingPulse ? "ring-2 ring-green-400" : ""} ${remainingAI && remainingAI[categoryForHints]===0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-        >
-          {remainingAI ? `Случайно (${remainingAI[categoryForHints]})` : 'Случайно'}
+      <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 flex items-center justify-between gap-3 overflow-x-auto">
+        <button type="button" onClick={()=>{ setShowMobileWizard(true); setMobileStage('weight'); }} className="relative px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1">
+          <span className="absolute -inset-[2px] rounded-2xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] opacity-50 animate-[pulse_3s_ease-in-out_infinite] blur-[2px]"></span>
+          <span className="relative">✨ Задание от ИИ</span>
         </button>
-
-        {/* Мобильные переключатели: экран и роль */}
-  {/* Переключатели экрана/роли удалены */}
-
-        {/* Синхронизация и статус */}
-        <button onClick={() => setShowSync(true)} className="px-3 py-2 rounded-2xl text-xs font-semibold border whitespace-nowrap">
-          Синк
-        </button>
-        <span className={`text-[10px] px-2 py-1 rounded-full border whitespace-nowrap ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`}>
-          {sync.status}
-        </span>
+        <div className="ml-auto">{(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<div className="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 3px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</div>); })()}</div>
       </div>
+
+      {showMobileWizard && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
+          <div className="w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold">Создание задания</div>
+              <button type="button" onClick={resetMobile} className="px-3 py-1.5 rounded-2xl text-xs font-semibold border">Закрыть</button>
+            </div>
+            {mobileStage==='weight' && (
+              <div>
+                <div className="text-xs font-semibold mb-2 text-neutral-500">Выберите вес</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1,5,10,15].map(w => (
+                    <button key={w} onClick={()=>{ setMobileWeight(w); setMobileStage('mode'); }} className={`py-2 rounded-xl text-sm font-semibold border ${mobileWeight===w? 'bg-neutral-900 text-white':'bg-white hover:bg-neutral-100'}`}>+{w}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {mobileStage==='mode' && (
+              <div className="flex flex-col gap-3">
+                <div className="text-xs font-semibold text-neutral-500">Вес: <span className="font-bold">+{mobileWeight}</span></div>
+                <div className="text-[11px] text-neutral-500">Осталось генераций: {remainingAI? remainingAI[categoryForHints] : '—'}</div>
+                <div className="flex flex-col gap-2">
+                  <div className="relative">
+                    <span className="absolute -inset-[2px] rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] opacity-50 animate-[pulse_3s_ease-in-out_infinite] blur-[2px]"></span>
+                    <button type="button" onClick={()=>{ addRandomSuggestion(mobileWeight); resetMobile(); }} disabled={remainingAI && remainingAI[categoryForHints]===0} className="relative w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40">AI генерация</button>
+                  </div>
+                  <button type="button" onClick={()=>setMobileStage('manual')} className="px-4 py-3 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100">Вручную</button>
+                </div>
+              </div>
+            )}
+            {mobileStage==='manual' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between text-xs text-neutral-500"><span>Вес</span><span className="font-semibold">+{mobileWeight}</span></div>
+                <input value={mobileTitle} onChange={e=>setMobileTitle(e.target.value)} placeholder="Заголовок" className="border rounded-xl px-3 py-2 text-sm" />
+                <textarea value={mobileDesc} onChange={e=>setMobileDesc(e.target.value)} placeholder="Описание" className="border rounded-xl px-3 py-2 text-xs resize-none h-24" />
+                <div className="flex gap-2">
+                  <button disabled={!mobileTitle.trim()} onClick={()=>{ if(!mobileTitle.trim()) return; const card = { id: uid(), title: mobileTitle.trim(), desc: mobileDesc.trim(), weight: mobileWeight, categoryId: categoryForHints, source:'manual' }; setManual(m=>[card,...m]); notify('Добавлена карточка',{ type:'success', msg: card.title }); resetMobile(); }} className="flex-1 px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40">Добавить</button>
+                  <button type="button" onClick={()=>setMobileStage('mode')} className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white">Назад</button>
+                </div>
+              </div>
+            )}
+            {mobileStage!=='weight' && mobileStage!=='idle' && (
+              <button type="button" onClick={()=>setMobileStage('weight')} className="text-[11px] text-neutral-500 self-start">← Назад к выбору веса</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Sync modal */}
       {showSync && (
