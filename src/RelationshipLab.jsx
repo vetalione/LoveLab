@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// Firestore signaling (lightweight) — optional: will be used for new simplified flow
+import { db, ensureAnonAuth } from './firebase';
+import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore';
 
 // ====== Utilities ======
 function getWeek(d = new Date()) {
@@ -823,6 +826,63 @@ function waitForICE(pc) {
     };
     pc.addEventListener("icegatheringstatechange", check);
   });
+}
+
+// ===== Firestore simplified session (2 words + suffix) =====
+const WORDS_A = ["синий","алый","янтарный","серебряный","лунный","нежный","огненный","мятный","лазурный","шёлковый","бирюзовый","янтарный","фиолетовый","солнечный","ледяной","медовый"];
+const WORDS_B = ["лев","лось","дракон","дельфин","павлин","ёж","кот","волк","орёл","феникс","тигр","кит","фламинго","ягуар","лисица","сова"];
+function randomWord(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randomSuffix(){ return Math.random().toString(36).slice(2,5); }
+async function generateCode(maxTries=5){
+  for (let i=0;i<maxTries;i++) {
+    const code = `${randomWord(WORDS_A)}-${randomWord(WORDS_B)}-${randomSuffix()}`;
+    const ref = doc(db,'p2pSessions', code);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return { code, ref };
+  }
+  throw new Error('Не удалось сгенерировать код');
+}
+
+export function useFirestoreSession(){
+  const [phase,setPhase]=useState('idle'); // idle|creating|waiting|answering|connected|error
+  const [code,setCode]=useState('');
+  const unsubRef = useRef(null);
+  const cleanupListener=()=>{ if(unsubRef.current){ unsubRef.current(); unsubRef.current=null; } };
+  useEffect(()=>cleanupListener,[]);
+
+  async function create(offerSDP){
+    try {
+      await ensureAnonAuth();
+      setPhase('creating');
+      const {code,ref}=await generateCode();
+      await setDoc(ref,{ offer:offerSDP, createdAt:serverTimestamp(), status:'waiting' });
+      setCode(code); setPhase('waiting');
+      unsubRef.current = onSnapshot(ref,(snap)=>{
+        const d=snap.data();
+        if (d?.answer && phase!=='connected') { setPhase('connected'); }
+      });
+      return code;
+    } catch(e){ setPhase('error'); throw e; }
+  }
+  async function answer(code, offerSDP, answerSDPSetter){
+    try {
+      await ensureAnonAuth();
+      setCode(code); setPhase('answering');
+      const ref = doc(db,'p2pSessions', code);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) throw new Error('Сессия не найдена');
+      const data=snap.data();
+      if(!data.offer) throw new Error('Нет offer');
+      // offerSDP уже извне (мы его используем для RTCPeerConnection);
+      unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); if(d?.answer) setPhase('connected'); });
+      return data.offer; // возвращаем исходный offer
+    } catch(e){ setPhase('error'); throw e; }
+  }
+  async function submitAnswer(code, answerSDP){
+    const ref = doc(db,'p2pSessions', code); await updateDoc(ref,{ answer:answerSDP, status:'answered' });
+  }
+  function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); }
+  return { phase, code, create, answer, submitAnswer, dispose };
 }
 
 // ====== Random card generator ======
