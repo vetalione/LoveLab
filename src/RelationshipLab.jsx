@@ -287,10 +287,12 @@ function shift(hex, pct) {
   return '#'+out;
 }
 
-function SliderRow({ model, onChange, onSelectCategory, disabled }) {
+function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCategory }) {
   const [testCat, setTestCat] = useState(null); // category id currently in test
   const [testIndex, setTestIndex] = useState(0);
   const [testAnswers, setTestAnswers] = useState([]); // numbers 1-10
+  const mobileRef = useRef(null);
+  const cardRefs = useRef({});
 
   const testQuestions = useMemo(()=>{
     if(!testCat) return [];
@@ -351,46 +353,101 @@ function SliderRow({ model, onChange, onSelectCategory, disabled }) {
     }
   }
 
+  // Sync scroll position with selectedCategory (when changed from outside) on mobile
+  useEffect(() => {
+    const cont = mobileRef.current;
+    if(!cont) return;
+    const media = window.matchMedia('(max-width: 639px)'); // < sm
+    if(!media.matches) return; // only mobile
+    const el = cardRefs.current[selectedCategory];
+    if(el) {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [selectedCategory]);
+
+  // On scroll determine the centered card and update selection
+  const handleScroll = useCallback(() => {
+    const cont = mobileRef.current;
+    if(!cont) return;
+    const center = cont.scrollLeft + cont.clientWidth/2;
+    let bestId = null; let bestDist = Infinity;
+    for(const c of CATEGORIES){
+      const el = cardRefs.current[c.id];
+      if(!el) continue;
+      const rect = el.getBoundingClientRect();
+      const contRect = cont.getBoundingClientRect();
+      const elCenter = rect.left - contRect.left + rect.width/2 + cont.scrollLeft;
+      const dist = Math.abs(elCenter - center);
+      if(dist < bestDist){ bestDist = dist; bestId = c.id; }
+    }
+    if(bestId && bestId !== selectedCategory && onSelectCategory) onSelectCategory(bestId);
+  }, [onSelectCategory, selectedCategory]);
+
+  useEffect(() => {
+    const cont = mobileRef.current;
+    if(!cont) return;
+    cont.addEventListener('scroll', handleScroll, { passive: true });
+    let rAF;
+    const onResize = () => { cancelAnimationFrame(rAF); rAF = requestAnimationFrame(handleScroll); };
+    window.addEventListener('resize', onResize);
+    // initial
+    handleScroll();
+    return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); cancelAnimationFrame(rAF); };
+  }, [handleScroll]);
+
+  const renderCard = (c, mobile=false) => {
+    const val = model[c.id];
+    return (
+      <div
+        key={c.id}
+        ref={(el)=>{ if(mobile) cardRefs.current[c.id]=el; }}
+        className={`p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm relative ${mobile? 'flex-shrink-0 w-[88vw] snap-center':'w-full'} ${selectedCategory===c.id? 'ring-1 ring-neutral-800':''}`}
+      >
+        <div className="text-sm font-semibold mb-1">{c.label}</div>
+        <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={val}
+          disabled={disabled}
+          onChange={(e) => { if(disabled) return; onChange({ ...model, [c.id]: Number(e.target.value) }); if(onSelectCategory) onSelectCategory(c.id); }}
+          className={`w-full touch-none ${disabled? 'opacity-40 cursor-not-allowed' : ''}`}
+          style={{ '--c': c.color, '--p': `${val}%`, accentColor: c.color }}
+        />
+        <div className="flex items-center justify-between mt-2">
+          <div className="text-xs text-neutral-500">0</div>
+          <div className="text-xs font-medium">{val}%</div>
+          <div className="text-xs text-neutral-500">100</div>
+        </div>
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={()=>!disabled && startTest(c.id)}
+            disabled={disabled}
+            className="text-[11px] px-3 py-1.5 rounded-full border bg-white/90 hover:bg-white active:scale-[0.97] font-semibold shadow-sm relative disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              borderColor: c.color,
+              boxShadow: `0 0 0 1px ${c.color} inset, 0 1px 2px rgba(0,0,0,0.15)`
+            }}
+          >
+            Пройти тест
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      {CATEGORIES.map((c) => {
-        const val = model[c.id];
-        return (
-          <div key={c.id} className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm relative">
-            <div className="text-sm font-semibold mb-1">{c.label}</div>
-            <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={val}
-              disabled={disabled}
-              onChange={(e) => { if(disabled) return; onChange({ ...model, [c.id]: Number(e.target.value) }); if(onSelectCategory) onSelectCategory(c.id); }}
-              className={`w-full touch-none ${disabled? 'opacity-40 cursor-not-allowed' : ''}`}
-              style={{ '--c': c.color, '--p': `${val}%`, accentColor: c.color }}
-            />
-            <div className="flex items-center justify-between mt-2">
-              <div className="text-xs text-neutral-500">0</div>
-              <div className="text-xs font-medium">{val}%</div>
-              <div className="text-xs text-neutral-500">100</div>
-            </div>
-            <div className="mt-4 flex justify-center">
-              <button
-                type="button"
-                onClick={()=>!disabled && startTest(c.id)}
-                disabled={disabled}
-                className="text-[11px] px-3 py-1.5 rounded-full border bg-white/90 hover:bg-white active:scale-[0.97] font-semibold shadow-sm relative disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{
-                  borderColor: c.color,
-                  boxShadow: `0 0 0 1px ${c.color} inset, 0 1px 2px rgba(0,0,0,0.15)`
-                }}
-              >
-                Пройти тест
-              </button>
-            </div>
-          </div>
-        );
-      })}
+    <>
+      {/* Mobile carousel */}
+      <div className="sm:hidden -mx-3 px-3" ref={mobileRef} style={{ WebkitOverflowScrolling:'touch' }}>
+        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-none">{CATEGORIES.map(c=>renderCard(c,true))}</div>
+      </div>
+      {/* Desktop grid */}
+      <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {CATEGORIES.map(c=>renderCard(c,false))}
+      </div>
       {testCat && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl relative">
@@ -424,7 +481,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -1172,6 +1229,7 @@ export default function RelationshipLab() {
             onChange={(v) => setTubesModel(v)}
             onSelectCategory={(id)=> setCategoryForHints(id)}
             disabled={tubeView==='partner'}
+            selectedCategory={categoryForHints}
           />
         </section>
 
