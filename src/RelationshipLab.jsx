@@ -846,6 +846,7 @@ async function generateCode(maxTries=5){
 export function useFirestoreSession(){
   const [phase,setPhase]=useState('idle'); // idle|creating|waiting|answering|connected|error
   const [code,setCode]=useState('');
+  const [remoteAnswer,setRemoteAnswer]=useState('');
   const unsubRef = useRef(null);
   const cleanupListener=()=>{ if(unsubRef.current){ unsubRef.current(); unsubRef.current=null; } };
   useEffect(()=>cleanupListener,[]);
@@ -859,12 +860,12 @@ export function useFirestoreSession(){
       setCode(code); setPhase('waiting');
       unsubRef.current = onSnapshot(ref,(snap)=>{
         const d=snap.data();
-        if (d?.answer && phase!=='connected') { setPhase('connected'); }
+        if (d?.answer && phase!=='connected') { setRemoteAnswer(d.answer); setPhase('connected'); }
       });
       return code;
     } catch(e){ setPhase('error'); throw e; }
   }
-  async function answer(code, offerSDP, answerSDPSetter){
+  async function answer(code){
     try {
       await ensureAnonAuth();
       setCode(code); setPhase('answering');
@@ -873,16 +874,15 @@ export function useFirestoreSession(){
       if(!snap.exists()) throw new Error('Сессия не найдена');
       const data=snap.data();
       if(!data.offer) throw new Error('Нет offer');
-      // offerSDP уже извне (мы его используем для RTCPeerConnection);
-      unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); if(d?.answer) setPhase('connected'); });
-      return data.offer; // возвращаем исходный offer
+      unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); if(d?.answer) { setRemoteAnswer(d.answer); setPhase('connected'); } });
+      return data.offer; // возвращаем offer для установки remote
     } catch(e){ setPhase('error'); throw e; }
   }
   async function submitAnswer(code, answerSDP){
     const ref = doc(db,'p2pSessions', code); await updateDoc(ref,{ answer:answerSDP, status:'answered' });
   }
-  function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); }
-  return { phase, code, create, answer, submitAnswer, dispose };
+  function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); setRemoteAnswer(''); }
+  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose };
 }
 
 // ====== Random card generator ======
@@ -1318,6 +1318,40 @@ export default function RelationshipLab() {
 
   // ====== UI ======
   const [showSync, setShowSync] = useState(false);
+  // Firestore simplified signaling session hook
+  const fireSess = useFirestoreSession();
+  const [fsError,setFsError]=useState('');
+
+  // Helpers for new flow
+  async function hostCreateLink(){
+    try {
+      setFsError('');
+      // create WebRTC offer first (reuse existing startHost logic partially without UI textareas)
+      await sync.startHost();
+      const code = await fireSess.create(sync.offerText);
+      const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
+      try { await navigator.clipboard.writeText(url); } catch {}
+      if (navigator.share) {
+        try { await navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url }); } catch {}
+      }
+    } catch(e){ setFsError(String(e?.message||e)); }
+  }
+  async function guestJoinByCode(inputCode){
+    try {
+      setFsError('');
+      const offer = await fireSess.answer(inputCode.trim());
+      // we now have offer; build pc & create answer
+      await sync.startJoiner(offer);
+      await fireSess.submitAnswer(inputCode.trim(), sync.answerText);
+    } catch(e){ setFsError(String(e?.message||e)); }
+  }
+  // When remote answer appears for host, set it into acceptAnswer
+  useEffect(()=>{ if(fireSess.remoteAnswer && sync.status!=='connected'){ sync.acceptAnswer(fireSess.remoteAnswer); } },[fireSess.remoteAnswer]);
+  // Auto detect code in URL
+  useEffect(()=>{
+    if(!showSync) return; const p=new URLSearchParams(window.location.search); const c=p.get('c');
+    if(c && fireSess.phase==='idle'){ guestJoinByCode(c); }
+  },[showSync]);
 
   return (
     <div className="min-h-screen w-full bg-neutral-50 text-neutral-900 pb-24 lg:pb-10">
@@ -1561,75 +1595,40 @@ export default function RelationshipLab() {
         </div>
       )}
 
-      {/* Sync modal */}
+      {/* Sync modal (Firestore simplified) */}
       {showSync && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="w-full max-w-lg sm:max-w-2xl bg-white rounded-2xl p-4 sm:p-5 shadow-xl max-h-[90vh] overflow-y-auto overscroll-contain relative">
+          <div className="w-full max-w-sm sm:max-w-md bg-white rounded-2xl p-4 sm:p-5 shadow-xl max-h-[90vh] overflow-y-auto overscroll-contain relative">
             <div className="sticky top-0 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 bg-white rounded-t-2xl flex items-center justify-between z-10 border-b">
               <div className="text-base sm:text-lg font-semibold">Пригласить партнера</div>
-              <button onClick={() => setShowSync(false)} className="text-xs sm:text-sm px-3 py-2 rounded-2xl border">
-                Закрыть
-              </button>
+              <button onClick={() => setShowSync(false)} className="text-xs sm:text-sm px-3 py-2 rounded-2xl border">Закрыть</button>
             </div>
-            {showConnectHint && (
-              <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-snug">
-                <div className="font-semibold mb-1">Нужно подключить партнера!</div>
-                <ol className="list-decimal ml-4 space-y-1">
-                  <li>Один из вас нажимает «Сгенерировать OFFER» и отправляет полученный текст второму.</li>
-                  <li>Партнёр вставляет OFFER в своё поле и жмёт «Сгенерировать ANSWER».</li>
-                  <li>Ответ (ANSWER) отправляется обратно первому, он вставляет его и нажимает «Подтвердить ANSWER».</li>
-                </ol>
-                <div className="mt-2">После статуса <span className="font-medium">connected</span> можно смотреть «Колбы партнёра» и отправлять задания.</div>
+            <div className="text-xs text-neutral-600 mb-4">Автоматическая синхронизация через Firestore: один код‑ссылка, ответ прилетает автоматически.</div>
+            {fireSess.phase==='idle' && (
+              <div className="space-y-3">
+                <button onClick={hostCreateLink} className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">Создать ссылку</button>
+                <JoinByCodeForm onJoin={guestJoinByCode} loading={fireSess.phase==='answering'} />
               </div>
             )}
-            <div className="text-xs text-neutral-600 mb-4">
-              P2P через WebRTC (ручная сигнализация). 1) Хост генерирует OFFER и делится им. 2) Гость генерирует ANSWER и отправляет хосту. 3) Хост подтверждает ANSWER.
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="border rounded-2xl p-4">
-                <div className="font-medium mb-2">1) Создать соединение (хост)</div>
-                <button type="button" onClick={sync.startHost} className="mb-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
-                  Сгенерировать OFFER
-                </button>
-                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs" value={sync.offerText} readOnly placeholder="Скопируйте OFFER партнёру" onFocus={(e)=>e.target.select()} />
-                <div className="mt-2 text-xs text-neutral-600">Вставьте ANSWER от партнёра:</div>
-                <textarea
-                  className="w-full h-28 border rounded-2xl p-2 text-xs"
-                  placeholder="Вставьте ANSWER"
-                  value={sync.answerText}
-                  onChange={(e) => sync.setAnswerText(e.target.value)}
-                />
-                <button type="button" onClick={() => sync.acceptAnswer(sync.answerText)} className="mt-2 px-4 py-2 rounded-2xl text-xs font-semibold border">
-                  Подтвердить ANSWER
-                </button>
-              </div>
-              <div className="border rounded-2xl p-4">
-                <div className="font-medium mb-2">2) Присоединиться (гость)</div>
-                <textarea
-                  className="w-full h-28 border rounded-2xl p-2 text-xs"
-                  placeholder="Вставьте OFFER от хоста"
-                  value={sync.offerText}
-                  onChange={(e) => sync.setOfferText(e.target.value)}
-                />
-                <button type="button" onClick={() => sync.startJoiner(sync.offerText)} className="mt-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
-                  Сгенерировать ANSWER
-                </button>
-                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs mt-2" value={sync.answerText} readOnly placeholder="Скопируйте ANSWER и отправьте хосту" onFocus={(e)=>e.target.select()} />
-              </div>
-            </div>
-            <div className="mt-3 text-xs">
-              Состояние: <span className="font-medium">{sync.status}</span>
-            </div>
-            {sync.error && (
-              <div className="mt-2 text-xs text-red-600">
-                Ошибка: {sync.error}
+            {fireSess.phase==='creating' && <div className="text-sm">Создаём…</div>}
+            {fireSess.phase==='waiting' && (
+              <div className="space-y-3">
+                <CodeBadge code={fireSess.code} />
+                <div className="text-xs text-neutral-500">Ссылка скопирована. Отправь её партнёру. Ждём ANSWER…</div>
+                <div className="flex items-center gap-2 text-xs text-neutral-500"><span className="animate-spin h-3 w-3 border-2 border-neutral-300 border-t-neutral-900 rounded-full"/>Ожидание ответа…</div>
               </div>
             )}
-            <div className="mt-2">
-              <button type="button" onClick={sync.disconnect} className="px-3 py-2 rounded-2xl text-xs font-semibold border">
-                Сбросить соединение
-              </button>
-            </div>
+            {fireSess.phase==='answering' && (
+              <div className="text-xs text-neutral-500">Формируем ответ…</div>
+            )}
+            {fireSess.phase==='connected' && (
+              <div className="space-y-2">
+                <div className="p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs">Подключено ✅</div>
+                <button onClick={()=>{ fireSess.dispose(); }} className="px-3 py-2 text-xs rounded-2xl border font-semibold">Новая сессия</button>
+              </div>
+            )}
+            {(fsError || sync.error) && <div className="mt-3 text-xs text-red-600">{fsError || sync.error}</div>}
+            <div className="mt-4 text-[10px] text-neutral-400">Ручной режим (старый) временно отключён.</div>
           </div>
         </div>
       )}
@@ -1652,6 +1651,25 @@ function getSortedWeeks(history) {
 }
 function sumDelta(items, categoryId) {
   return items.filter((i) => i.categoryId === categoryId).reduce((acc, x) => acc + (x.delta || 0), 0);
+}
+
+// ====== Small UI helpers for Firestore sync ======
+function CodeBadge({ code }) {
+  return (
+    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-neutral-100 border text-xs font-mono select-all">
+      <span>{code}</span>
+      <button onClick={()=>{ try { navigator.clipboard.writeText(`${window.location.origin}?c=${code}`); } catch{} }} className="text-[10px] px-2 py-1 rounded-full border bg-white">Copy</button>
+    </div>
+  );
+}
+function JoinByCodeForm({ onJoin, loading }) {
+  const [v,setV]=useState('');
+  return (
+    <form onSubmit={(e)=>{ e.preventDefault(); if(!v.trim()) return; onJoin(v); }} className="flex gap-2">
+      <input value={v} onChange={e=>setV(e.target.value)} placeholder="код партнёра" className="flex-1 border rounded-2xl px-3 py-2 text-xs" />
+      <button disabled={!v.trim()||loading} className="px-4 py-2 rounded-2xl text-xs font-semibold bg-white border disabled:opacity-40">Войти</button>
+    </form>
+  );
 }
 
 // ====== Dev self‑tests (non‑blocking, console only) ======
