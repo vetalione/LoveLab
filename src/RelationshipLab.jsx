@@ -374,7 +374,15 @@ function SliderRow({ model, onChange, onSelectCategory }) {
               <div className="text-xs text-neutral-500">100</div>
             </div>
             <div className="mt-4 flex justify-center">
-              <button type="button" onClick={()=>startTest(c.id)} className="text-[11px] px-3 py-1.5 rounded-full border bg-white/90 hover:bg-white active:scale-[0.97] font-semibold shadow-sm">
+              <button
+                type="button"
+                onClick={()=>startTest(c.id)}
+                className="text-[11px] px-3 py-1.5 rounded-full border bg-white/90 hover:bg-white active:scale-[0.97] font-semibold shadow-sm relative"
+                style={{
+                  borderColor: c.color,
+                  boxShadow: `0 0 0 1px ${c.color} inset, 0 1px 2px rgba(0,0,0,0.15)`
+                }}
+              >
                 Пройти тест
               </button>
             </div>
@@ -718,6 +726,8 @@ export default function RelationshipLab() {
   // players & balances
   const [player, setPlayer] = useState("A");
   const [myRole, setMyRole] = useState("A");
+  // Which set of tubes we are currently viewing/editing: 'mine' | 'partner'
+  const [tubeView, setTubeView] = useState('mine');
   const [A, setA] = useState({ ...defaultScale });
   const [B, setB] = useState({ ...defaultScale });
   // Removed legacy lock feature (was {locked} state controlling editability)
@@ -760,6 +770,10 @@ export default function RelationshipLab() {
   const me = player === "A" ? A : B;
   const setMe = player === "A" ? setA : setB;
   const partner = player === "A" ? B : A;
+  // Derived tubes based on tubeView toggle
+  const tubesModel = tubeView === 'mine' ? me : partner;
+  const setTubesModel = tubeView === 'mine' ? setMe : (player === 'A' ? setB : setA);
+  const tubesPartner = tubeView === 'mine' ? partner : me; // for displaying partner overlay when viewing own tubes, and vice versa
   const myInbox = player === "A" ? inboxA : inboxB;
   const setMyInbox = player === "A" ? setInboxA : setInboxB;
   const partnerInbox = player === "A" ? inboxB : inboxA;
@@ -1119,17 +1133,43 @@ export default function RelationshipLab() {
 
         {/* My setup */}
         <section className="mb-8" id="base">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base sm:text-lg font-semibold">Базовая оценка — {player}</h2>
-            {/* Lock/Unlock button removed */}
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+            <div className="flex items-center gap-4 flex-wrap">
+              <h2 className="text-base sm:text-lg font-semibold">Текущий баланс:</h2>
+              <div className="flex bg-white/80 rounded-2xl p-1 border">
+                <button
+                  type="button"
+                  onClick={() => setTubeView('mine')}
+                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='mine' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
+                >Мои колбы</button>
+                <button
+                  type="button"
+                  onClick={() => setTubeView('partner')}
+                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='partner' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
+                >Колбы партнёра</button>
+              </div>
+            </div>
+            {/* (Lock feature removed) */}
           </div>
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs text-neutral-500">Клик или потяни по колбе чтобы задать значение</div>
+              <div className="text-xs text-neutral-500">Задай значения по колбам/бегункам как чувствуешь, либо пройди тесты!</div>
             </div>
-            <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} onSelectCategory={(id)=> setCategoryForHints(id)} selectedCategory={categoryForHints} />
+            <EditableTubes
+              model={tubesModel}
+              partner={tubesPartner}
+              avg={avg}
+              onChange={(v)=> setTubesModel(v)}
+              disabled={false}
+              onSelectCategory={(id)=> setCategoryForHints(id)}
+              selectedCategory={categoryForHints}
+            />
           </div>
-          <SliderRow model={me} onChange={(v) => setMe(v)} onSelectCategory={(id)=> setCategoryForHints(id)} />
+          <SliderRow
+            model={tubesModel}
+            onChange={(v) => setTubesModel(v)}
+            onSelectCategory={(id)=> setCategoryForHints(id)}
+          />
         </section>
 
 
