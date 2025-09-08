@@ -1415,13 +1415,39 @@ export default function RelationshipLab() {
   {/* Footer hints removed per request */}
       </div>
 
-      {/* Mobile bottom action bar */}
-      <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 flex items-center justify-between gap-3 overflow-x-auto">
-        <button type="button" onClick={()=>{ setShowMobileWizard(true); setMobileStage('weight'); }} className="ai-glow-btn relative px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1">
-          <span className="ai-glow-overlay absolute -inset-[2px] rounded-2xl"></span>
+      {/* Mobile bottom action bar (status left / AI center / category icon right) */}
+      <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 grid grid-cols-3 items-center gap-3">
+        {/* Connection status button */}
+        <button
+          type="button"
+          onClick={() => { setShowSync(true); if (sync.status !== 'connected') setShowConnectHint(true); }}
+          className="justify-self-start inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-white text-[10px] font-semibold active:scale-[0.97]"
+          aria-label={sync.status === 'connected' ? 'Подключено' : 'Не подключено'}
+        >
+          <span className={`w-2 h-2 rounded-full shadow-inner ${sync.status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'}`}></span>
+          <span>{sync.status === 'connected' ? 'ON' : 'OFF'}</span>
+        </button>
+        {/* Center AI button */}
+        <button
+          type="button"
+          onClick={() => { setShowMobileWizard(true); setMobileStage('weight'); }}
+          className="relative justify-self-center px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-md active:scale-[0.97]"
+        >
+          <span className="absolute -inset-[2px] rounded-2xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] opacity-50 animate-[pulse_3s_ease-in-out_infinite] blur-[2px]"></span>
           <span className="relative flex items-center gap-1"><span className="animate-pulse-spark">✨</span><span>Задание от ИИ</span></span>
         </button>
-        <div className="ml-auto">{(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<div className="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 3px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</div>); })()}</div>
+        {/* Current category icon (right) */}
+        <div className="justify-self-end flex items-center">
+          {(() => {
+            const cat = CATEGORIES.find(c => c.id === categoryForHints);
+            if (!cat) return null;
+            return (
+              <div className="w-12 h-12 rounded-2xl border bg-white/80 shadow-sm flex items-center justify-center">
+                <CategoryIcon id={cat.id} color={cat.color} size={30} stroke={2.4} />
+              </div>
+            );
+          })()}
+        </div>
       </div>
 
       {showMobileWizard && (
