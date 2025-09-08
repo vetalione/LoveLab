@@ -63,3 +63,15 @@ input[type=range]:active::-moz-range-thumb { transform: scale(1.05); }
 	input[type=range]::-webkit-slider-thumb,
 	input[type=range]::-moz-range-thumb { transition: none; }
 }
+
+/* Fix: occasionally top/side borders of translucent blurred cards vanished on iOS Safari.
+	 Force proper compositing & explicit border painting. */
+.card-blur-border {
+	position: relative;
+	background-clip: padding-box; /* ensure border stroke stays visible */
+	-webkit-background-clip: padding-box;
+	backface-visibility: hidden;
+	-webkit-backface-visibility: hidden;
+	transform: translateZ(0); /* new layer */
+}
+

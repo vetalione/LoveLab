@@ -453,7 +453,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       <div
         key={c.id}
         ref={(el)=>{ if(mobile) cardRefs.current[c.id]=el; }}
-        className={`p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm relative ${mobile? 'flex-shrink-0 w-[88vw] snap-center':'w-full'} ${selectedCategory===c.id? 'ring-1 ring-neutral-800':''}`}
+  className={`card-blur-border p-4 rounded-2xl border border-neutral-200 bg-white/70 backdrop-blur shadow-sm relative ${mobile? 'flex-shrink-0 w-[88vw] snap-center':'w-full'} ${selectedCategory===c.id? 'ring-1 ring-neutral-800':''}`}
       >
         <div className="text-sm font-semibold mb-1">{c.label}</div>
         <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
@@ -1349,7 +1349,7 @@ export default function RelationshipLab() {
         {/* Contribution Stats (moved below cards) */}
         <section className="mb-10" id="contrib-stats">
           <div className="flex items-center gap-3 mb-3 flex-wrap">
-            <h2 className="text-base sm:text-lg font-semibold">Статистика вклада</h2>
+            <h2 className="text-base sm:text-lg font-semibold">Ваша статистика</h2>
             <div className="flex gap-1 bg-white/80 rounded-2xl p-1 border">
               <button onClick={()=>setStatsFilter('_all')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${statsFilter==='_all'?'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`}>Общее</button>
               {CATEGORIES.map(c => (
