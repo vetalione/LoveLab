@@ -93,6 +93,22 @@ function CategoryIcon({ id, color, size = 22, stroke = 1.8 }) {
 
 const defaultScale = { trust: 50, friendship: 50, passion: 50, adventure: 50, respect: 50 };
 
+// Contrast helper: decide text color (black/white) for given hex
+function readableTextColor(hex){
+  if(!hex) return '#111';
+  const m = hex.replace('#','');
+  const r = parseInt(m.substring(0,2),16);
+  const g = parseInt(m.substring(2,4),16);
+  const b = parseInt(m.substring(4,6),16);
+  // relative luminance
+  const L = (0.2126*r + 0.7152*g + 0.0722*b)/255;
+  return L > 0.62 ? '#111' : '#fff';
+}
+// Gradient similar to tube styling
+function categoryGradient(color){
+  try { return `linear-gradient(135deg, ${lighten(color,35)} 0%, ${lighten(color,12)} 35%, ${color} 70%, ${darken(color,10)} 100%)`; } catch { return color; }
+}
+
 // Built-in suggestion bank (shortened)
 const BANK = {
   trust: [
@@ -1019,7 +1035,7 @@ export default function RelationshipLab() {
         {/* Suggestions + weight */}
         <section className="mb-8" id="cards">
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">Карточки‑подсказки <span className="text-xs px-2 py-1 rounded-full border bg-white font-normal">{CATEGORIES.find(c=>c.id===categoryForHints)?.label}</span></h2>
+            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">Карточки‑подсказки {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-sm px-3 py-1.5 rounded-full font-medium shadow-sm" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</span>); })()}</h2>
             <div className="hidden lg:flex gap-2 items-center">
               <select className="border rounded-2xl px-3 py-2 bg-white text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
                 {[1, 5, 10, 15].map((w) => (
@@ -1070,7 +1086,7 @@ export default function RelationshipLab() {
                   onClick={()=>{ setImpact(createForm.weight); addRandomSuggestion(); }}
                   className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100"
                 >AI генерация</button>
-                <span className="text-[10px] text-neutral-500">Категория: {CATEGORIES.find(c=>c.id===categoryForHints)?.label}</span>
+                {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<span className="text-xs px-2.5 py-0.5 rounded-full font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.15)' }}>{cat.label}</span>); })()}
               </div>
             </div>
           )}
@@ -1154,7 +1170,7 @@ export default function RelationshipLab() {
       {/* Mobile bottom action bar */}
       <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 flex items-center gap-2 overflow-x-auto">
   {/* Категория выбирается по взаимодействию с пробиркой / слайдером */}
-  <div className="text-[10px] px-2 py-1 rounded-full border bg-white whitespace-nowrap">{CATEGORIES.find(c=>c.id===categoryForHints)?.label}</div>
+  {(() => { const cat = CATEGORIES.find(c=>c.id===categoryForHints); if(!cat) return null; const txt = readableTextColor(cat.color); return (<div className="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium" style={{ background: categoryGradient(cat.color), color: txt, boxShadow: '0 1px 3px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.25)' }}>{cat.label}</div>); })()}
         <select className="w-20 border rounded-2xl px-3 py-2 text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
           {[1, 5, 10, 15].map((w) => (
             <option key={w} value={w}>
