@@ -24,8 +24,8 @@ const CATEGORIES = [
 ];
 
 // Minimalistic inline icons (stroke currentColor / filled) to save bundle & avoid deps
-function CategoryIcon({ id, color }) {
-  const common = { width: 22, height: 22, strokeWidth: 1.6, stroke: 'currentColor', fill: 'none', vectorEffect: 'non-scaling-stroke' };
+function CategoryIcon({ id, color, size = 22, stroke = 1.8 }) {
+  const common = { width: size, height: size, strokeWidth: stroke, stroke: 'currentColor', fill: 'none', vectorEffect: 'non-scaling-stroke' };
   const col = { color };
   switch (id) {
     case 'trust': // shield-heart
@@ -234,8 +234,8 @@ function EditableTubes({ model, partner, avg, onChange, disabled }) {
               </div>
             </button>
             <div className="text-xs sm:text-sm font-bold text-neutral-800 leading-none">{v}%</div>
-            <div className="h-6 flex items-center justify-center" aria-hidden>
-              <CategoryIcon id={c.id} color={c.color} />
+            <div className="h-8 flex items-center justify-center" aria-hidden>
+              <CategoryIcon id={c.id} color={c.color} size={30} stroke={2.2} />
               <span className="sr-only">{c.label}</span>
             </div>
           </div>
@@ -293,13 +293,14 @@ function Suggestions({ items, onSend, onDelete }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
       {list.map((p, i) => (
-        <div key={p.id || i} className="group rounded-2xl border p-3 bg-white/80 shadow-sm flex flex-col justify-between relative">
+  <div key={p.id || i} className="group rounded-2xl border p-3 pr-9 bg-white/80 shadow-sm flex flex-col justify-between relative">
           {(p.source === 'generated' || p.source === 'custom') && (
             <button
               type="button"
               onClick={() => onDelete?.(p)}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-neutral-400 hover:text-red-600 text-xs"
+              className="absolute top-1.5 right-1.5 text-neutral-500 hover:text-red-600 text-base font-bold leading-none w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300"
               title="Удалить карточку"
+              aria-label="Удалить карточку"
             >
               ×
             </button>
