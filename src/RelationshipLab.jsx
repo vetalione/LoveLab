@@ -402,9 +402,16 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       const check = () => {
         const pos = cont.scrollLeft;
         if(pos === lastScrollPosRef.current){
-          // stable -> finalize selection
+          // stable -> finalize selection with a tiny deliberate delay (20ms) to avoid rapid flicker
             const id = bestIdRef.current;
-            if(id && id !== selectedCategory && onSelectCategory) onSelectCategory(id);
+            if(id && id !== selectedCategory && onSelectCategory){
+              setTimeout(()=>{
+                // ensure still the same best id and not suppressed
+                if(bestIdRef.current === id && !suppressScrollSelectRef.current && id !== selectedCategory){
+                  onSelectCategory(id);
+                }
+              },20);
+            }
             scrollCheckingRef.current = false;
             scrollEndRafRef.current = null;
             return;
