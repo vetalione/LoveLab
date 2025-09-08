@@ -369,6 +369,8 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   const handleScroll = useCallback(() => {
     const cont = mobileRef.current;
     if(!cont) return;
+  const media = window.matchMedia('(max-width: 639px)');
+  if(!media.matches) return; // only act on mobile
     const center = cont.scrollLeft + cont.clientWidth/2;
     let bestId = null; let bestDist = Infinity;
     for(const c of CATEGORIES){
@@ -386,6 +388,8 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   useEffect(() => {
     const cont = mobileRef.current;
     if(!cont) return;
+  const media = window.matchMedia('(max-width: 639px)');
+  if(!media.matches) return; // skip attaching on desktop
     cont.addEventListener('scroll', handleScroll, { passive: true });
     let rAF;
     const onResize = () => { cancelAnimationFrame(rAF); rAF = requestAnimationFrame(handleScroll); };
