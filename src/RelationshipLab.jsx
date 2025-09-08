@@ -1271,7 +1271,7 @@ export default function RelationshipLab() {
           </div>
           <div className="hidden lg:flex items-center gap-3 flex-wrap">
             <button onClick={() => setShowSync(true)} className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">
-              Онлайн‑синхронизация
+              Пригласить партнера
             </button>
             <span className={`text-xs px-2 py-1 rounded-full border ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`}>
               {sync.status}
@@ -1380,7 +1380,7 @@ export default function RelationshipLab() {
         <section className="mb-8" id="inbox">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base sm:text-lg font-semibold">Входящие предложения</h2>
-            <div className="text-xs text-neutral-500 hidden sm:block">Примите — чтобы пополнить «пробирку» у обоих (по весу карточки)</div>
+            <div className="text-xs text-neutral-500 hidden sm:block">Примите предложенные идеи — чтобы пополнить колбу у обоих (по весу карточки)</div>
           </div>
           {myInbox.length === 0 ? (
             <div className="text-sm text-neutral-500 border rounded-2xl p-4 sm:p-6 bg-white text-center">Пока пусто.</div>
@@ -1418,13 +1418,13 @@ export default function RelationshipLab() {
   {/* Footer hints removed per request */}
       </div>
 
-      {/* Mobile bottom action bar (status left / AI center / category icon right) */}
-      <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 grid grid-cols-3 items-center gap-3">
+    {/* Mobile bottom action bar (status left / AI center / category icon right) */}
+    <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-2 sm:p-3 grid items-center gap-2 grid-cols-[auto_1fr_auto]">
         {/* Connection status button */}
         <button
           type="button"
           onClick={() => { setShowSync(true); if (sync.status !== 'connected') setShowConnectHint(true); }}
-          className="justify-self-start inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-white text-[10px] font-semibold active:scale-[0.97]"
+      className="justify-self-start inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-white text-[10px] font-semibold active:scale-[0.97] whitespace-nowrap"
           aria-label={sync.status === 'connected' ? 'Подключено' : 'Не подключено'}
         >
           <span className={`w-2 h-2 rounded-full shadow-inner ${sync.status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'}`}></span>
@@ -1434,7 +1434,7 @@ export default function RelationshipLab() {
         <button
           type="button"
           onClick={() => { setShowMobileWizard(true); setMobileStage('weight'); }}
-          className="relative justify-self-center px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-md active:scale-[0.97]"
+      className="relative justify-self-center px-4 py-2 max-[380px]:px-3 rounded-2xl text-[11px] sm:text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-md active:scale-[0.97] whitespace-nowrap leading-tight"
         >
           <span className="absolute -inset-[2px] rounded-2xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] opacity-50 animate-[pulse_3s_ease-in-out_infinite] blur-[2px]"></span>
           <span className="relative flex items-center gap-1"><span className="animate-pulse-spark">✨</span><span>Задание от ИИ</span></span>
@@ -1445,7 +1445,7 @@ export default function RelationshipLab() {
             const cat = CATEGORIES.find(c => c.id === categoryForHints);
             if (!cat) return null;
             return (
-              <div className="w-12 h-12 rounded-2xl border bg-white/80 shadow-sm flex items-center justify-center">
+        <div className="w-12 h-12 max-[380px]:w-11 max-[380px]:h-11 rounded-2xl border bg-white/80 shadow-sm flex items-center justify-center">
                 <CategoryIcon id={cat.id} color={cat.color} size={30} stroke={2.4} />
               </div>
             );
@@ -1503,11 +1503,11 @@ export default function RelationshipLab() {
 
       {/* Sync modal */}
       {showSync && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-2xl bg-white rounded-2xl p-5 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-lg font-semibold">Онлайн‑синхронизация</div>
-              <button onClick={() => setShowSync(false)} className="text-sm px-3 py-2 rounded-2xl border">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="w-full max-w-lg sm:max-w-2xl bg-white rounded-2xl p-4 sm:p-5 shadow-xl max-h-[90vh] overflow-y-auto overscroll-contain relative">
+            <div className="sticky top-0 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 bg-white rounded-t-2xl flex items-center justify-between z-10 border-b">
+              <div className="text-base sm:text-lg font-semibold">Пригласить партнера</div>
+              <button onClick={() => setShowSync(false)} className="text-xs sm:text-sm px-3 py-2 rounded-2xl border">
                 Закрыть
               </button>
             </div>
