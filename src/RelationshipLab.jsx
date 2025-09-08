@@ -942,6 +942,8 @@ export default function RelationshipLab() {
   // Current filter: '_all' for overall, else category id
   const [statsFilter, setStatsFilter] = useState('_all');
   const currentStats = statsFilter === '_all' ? overallStats : categoryStats[statsFilter] || overallStats;
+  // Mobile partner tubes swipe toggle
+  const [showPartnerTubes, setShowPartnerTubes] = useState(false);
 
   function StatBar({ label, a, b }){
     const total = (a+b)||1;
@@ -1024,9 +1026,54 @@ export default function RelationshipLab() {
           </div>
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs text-neutral-500">Клик или потяни по колбе чтобы задать значение</div>
+              <div className="text-xs text-neutral-500 lg:block hidden">Клик или потяни по колбе чтобы задать значение</div>
+              <div className="text-[10px] text-neutral-500 lg:hidden">Свайп влево чтобы увидеть баланс партнёра</div>
+              {showPartnerTubes && (
+                <button onClick={()=> setShowPartnerTubes(false)} className="lg:hidden ml-auto text-[10px] px-2 py-1 rounded-full border bg-white">Мои значения</button>
+              )}
             </div>
-            <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} onSelectCategory={(id)=> setCategoryForHints(id)} selectedCategory={categoryForHints} />
+            {/* Swipe container (mobile only) */}
+            <div
+              className="relative select-none"
+              style={{ touchAction: 'pan-y' }}
+              onTouchStart={(e)=>{ const t=e.touches[0]; e.currentTarget.dataset.sx=t.clientX; e.currentTarget.dataset.sy=t.clientY; e.currentTarget.dataset.st=Date.now(); }}
+              onTouchEnd={(e)=>{ const sx=Number(e.currentTarget.dataset.sx||0); const sy=Number(e.currentTarget.dataset.sy||0); const st=Number(e.currentTarget.dataset.st||0); const t=e.changedTouches[0]; const dx=t.clientX-sx; const dy=Math.abs(t.clientY-sy); const dt=Date.now()-st; if(window.innerWidth<1024 && dt<800 && Math.abs(dx)>50 && dy<60){ if(dx<0){ setShowPartnerTubes(true); } else { setShowPartnerTubes(false); } } }}
+            >
+              {/* Active view */}
+              <div className="lg:block">
+                {!showPartnerTubes && (
+                  <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} onSelectCategory={(id)=> setCategoryForHints(id)} selectedCategory={categoryForHints} />
+                )}
+                {showPartnerTubes && (
+                  <div className="animate-fade-in">
+                    {sync.status === 'connected' ? (
+                      <>
+                        <div className="text-[10px] text-neutral-500 mb-1 lg:hidden">Баланс партнёра · свайп вправо чтобы вернуться</div>
+                        <EditableTubes model={partner} partner={partner} avg={avg} onChange={()=>{}} disabled={true} selectedCategory={categoryForHints} />
+                      </>
+                    ) : (
+                      <div className="rounded-2xl border bg-white/70 p-4 text-center flex flex-col items-center gap-3">
+                        <div className="text-xs font-medium">Ваш партнёр не подключен</div>
+                        <div className="flex gap-2 w-full justify-center">
+                          <button onClick={()=> setShowPartnerTubes(false)} className="px-3 py-1.5 rounded-2xl text-xs font-semibold border bg-white">Мои значения</button>
+                          <button onClick={()=> setShowSync(true)} className="px-3 py-1.5 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">Онлайн‑синк</button>
+                        </div>
+                        <div className="grid grid-cols-5 gap-2 w-full mt-2">
+                          {CATEGORIES.map(c=> (
+                            <div key={c.id} className="flex flex-col items-center gap-1">
+                              <div className="w-12 h-20 rounded-xl bg-gradient-to-b from-neutral-200 to-neutral-100 border border-neutral-300 flex items-end overflow-hidden">
+                                <div className="w-full bg-neutral-300 h-[50%]" />
+                              </div>
+                              <div className="text-[10px] text-neutral-500 text-center leading-tight px-1">{c.label.split(' ')[0]}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <SliderRow model={me} onChange={(v) => setMe(v)} onSelectCategory={(id)=> setCategoryForHints(id)} />
         </section>
