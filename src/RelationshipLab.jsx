@@ -394,10 +394,10 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
     // store best and debounce to end of swipe (inactivity window)
     swipePendingRef.current = bestId;
     clearTimeout(swipeTimerRef.current);
-    swipeTimerRef.current = setTimeout(()=>{
+  swipeTimerRef.current = setTimeout(()=>{
       const id = swipePendingRef.current;
       if(id && id !== selectedCategory && onSelectCategory) onSelectCategory(id);
-    }, 120);
+  }, 48);
   }, [onSelectCategory, selectedCategory]);
 
   useEffect(() => {
