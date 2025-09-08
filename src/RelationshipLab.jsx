@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Firestore signaling (lightweight) — optional: will be used for new simplified flow
 import { db, ensureAnonAuth } from './firebase';
-import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, getDoc, deleteDoc, collection, getDocs, where, Timestamp } from 'firebase/firestore';
 
 // ====== Utilities ======
 function getWeek(d = new Date()) {
@@ -848,19 +848,59 @@ export function useFirestoreSession(){
   const [code,setCode]=useState('');
   const [remoteAnswer,setRemoteAnswer]=useState('');
   const unsubRef = useRef(null);
+  const docRefRef = useRef(null); // holds created/answered doc ref
+  const isHostRef = useRef(false);
   const cleanupListener=()=>{ if(unsubRef.current){ unsubRef.current(); unsubRef.current=null; } };
   useEffect(()=>cleanupListener,[]);
+
+  // Best-effort TTL cleanup (remove sessions older than 20m)
+  async function cleanupOldSessions(){
+    try {
+      await ensureAnonAuth();
+      const ttlMs = 20*60*1000;
+      const oldest = new Date(Date.now()-ttlMs);
+      const q = where('createdAt','<', Timestamp.fromDate(oldest));
+      // Firestore requires collection+query building
+      const col = collection(db,'p2pSessions');
+      // We may have to fetch all and filter if index missing; fallback silently
+      let snaps;
+      try {
+        snaps = await getDocs({ withConverter: undefined, type: 'query', _query: { path: col.path, filters:[q] } });
+      } catch {
+        // Fallback simple: fetch limited batch and filter client-side
+        snaps = await getDocs(col);
+      }
+      const now = Date.now();
+      const batch = [];
+      snaps.forEach(s=>{
+        const d=s.data();
+        const createdAt = d?.createdAt?.toMillis ? d.createdAt.toMillis() : 0;
+        if(createdAt && now-createdAt>ttlMs){ batch.push(s.ref); }
+      });
+      for (const r of batch.slice(0,25)) { try { await deleteDoc(r); } catch {} }
+    } catch {}
+  }
 
   async function create(offerSDP){
     try {
       await ensureAnonAuth();
+      await cleanupOldSessions();
+      isHostRef.current = true;
       setPhase('creating');
       const {code,ref}=await generateCode();
+      docRefRef.current = ref;
       await setDoc(ref,{ offer:offerSDP, createdAt:serverTimestamp(), status:'waiting' });
       setCode(code); setPhase('waiting');
       unsubRef.current = onSnapshot(ref,(snap)=>{
         const d=snap.data();
-        if (d?.answer && phase!=='connected') { setRemoteAnswer(d.answer); setPhase('connected'); }
+        if (d?.answer && phase!=='connected') {
+          setRemoteAnswer(d.answer); setPhase('connected');
+          // host: delete doc after we received answer (ephemeral)
+          if(isHostRef.current && docRefRef.current){
+            const delRef = docRefRef.current; docRefRef.current=null;
+            setTimeout(()=>{ deleteDoc(delRef).catch(()=>{}); }, 4000);
+          }
+        }
       });
       return code;
     } catch(e){ setPhase('error'); throw e; }
@@ -868,21 +908,25 @@ export function useFirestoreSession(){
   async function answer(code){
     try {
       await ensureAnonAuth();
+      isHostRef.current = false;
       setCode(code); setPhase('answering');
       const ref = doc(db,'p2pSessions', code);
+      docRefRef.current = ref;
       const snap = await getDoc(ref);
       if(!snap.exists()) throw new Error('Сессия не найдена');
       const data=snap.data();
       if(!data.offer) throw new Error('Нет offer');
-      unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); if(d?.answer) { setRemoteAnswer(d.answer); setPhase('connected'); } });
+      unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); if(d?.answer){ setRemoteAnswer(d.answer); setPhase('connected'); } });
       return data.offer; // возвращаем offer для установки remote
     } catch(e){ setPhase('error'); throw e; }
   }
   async function submitAnswer(code, answerSDP){
     const ref = doc(db,'p2pSessions', code); await updateDoc(ref,{ answer:answerSDP, status:'answered' });
+    // guest schedules cleanup (in case host cannot delete) after short delay
+    setTimeout(()=>{ if(!isHostRef.current && docRefRef.current){ deleteDoc(docRefRef.current).catch(()=>{}); docRefRef.current=null; } }, 1000*60*5); // fallback delete after 5m
   }
-  function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); setRemoteAnswer(''); }
-  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose };
+  function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); setRemoteAnswer(''); isHostRef.current=false; docRefRef.current=null; }
+  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose, cleanupOldSessions };
 }
 
 // ====== Random card generator ======
@@ -1330,10 +1374,12 @@ export default function RelationshipLab() {
       await sync.startHost();
       const code = await fireSess.create(sync.offerText);
       const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
-      try { await navigator.clipboard.writeText(url); } catch {}
+      let copied=false;
+      try { await navigator.clipboard.writeText(url); copied=true; } catch {}
       if (navigator.share) {
         try { await navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url }); } catch {}
       }
+      notify('Ссылка создана', { type:'success', msg: copied? 'Скопирована в буфер' : code });
     } catch(e){ setFsError(String(e?.message||e)); }
   }
   async function guestJoinByCode(inputCode){
@@ -1347,11 +1393,14 @@ export default function RelationshipLab() {
   }
   // When remote answer appears for host, set it into acceptAnswer
   useEffect(()=>{ if(fireSess.remoteAnswer && sync.status!=='connected'){ sync.acceptAnswer(fireSess.remoteAnswer); } },[fireSess.remoteAnswer]);
-  // Auto detect code in URL
+  // Auto detect code in URL on load
   useEffect(()=>{
-    if(!showSync) return; const p=new URLSearchParams(window.location.search); const c=p.get('c');
-    if(c && fireSess.phase==='idle'){ guestJoinByCode(c); }
-  },[showSync]);
+    const p=new URLSearchParams(window.location.search); const c=p.get('c');
+    if(c && fireSess.phase==='idle') { setShowSync(true); guestJoinByCode(c); }
+  },[fireSess.phase]);
+
+  // Run TTL cleanup once on mount (best-effort)
+  useEffect(()=>{ fireSess.cleanupOldSessions?.(); },[]);
 
   return (
     <div className="min-h-screen w-full bg-neutral-50 text-neutral-900 pb-24 lg:pb-10">
@@ -1614,7 +1663,13 @@ export default function RelationshipLab() {
             {fireSess.phase==='waiting' && (
               <div className="space-y-3">
                 <CodeBadge code={fireSess.code} />
-                <div className="text-xs text-neutral-500">Ссылка скопирована. Отправь её партнёру. Ждём ANSWER…</div>
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={()=>{ try { navigator.clipboard.writeText(`${window.location.origin}?c=${fireSess.code}`); notify('Скопировано',{ type:'success'}); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold border bg-white">Копировать ссылку</button>
+                  {navigator.share && (
+                    <button onClick={()=>{ try { navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url: `${window.location.origin}?c=${fireSess.code}` }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
+                  )}
+                </div>
+                <div className="text-xs text-neutral-500">Отправь партнёру — он может просто открыть ссылку (автоподключение).</div>
                 <div className="flex items-center gap-2 text-xs text-neutral-500"><span className="animate-spin h-3 w-3 border-2 border-neutral-300 border-t-neutral-900 rounded-full"/>Ожидание ответа…</div>
               </div>
             )}
