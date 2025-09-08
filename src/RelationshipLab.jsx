@@ -543,7 +543,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   );
 }
 
-function Suggestions({ items, onSend, onDelete }) {
+function Suggestions({ items, onSend, onDelete, activeCategoryId }) {
   // items: [{id?, title, desc, weight?, source, packId?, categoryId?}]
   const list = items || [];
   return (
@@ -564,7 +564,7 @@ function Suggestions({ items, onSend, onDelete }) {
           <div>
             <div className="text-sm font-semibold mb-1 flex items-center gap-2">
               <span>{p.title}</span>
-              {p.weight ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{p.weight}</span> : null}
+              {p.weight ? (() => { const catId = p.categoryId || activeCategoryId; const cat = CATEGORIES.find(c=>c.id===catId); if(!cat) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{p.weight}</span>; const txt = readableTextColor(cat.color); return (<span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: cat.color, color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15)' }}>+{p.weight}</span>); })() : null}
             </div>
             <div className="text-xs text-neutral-600 whitespace-pre-line">{p.desc}</div>
           </div>
@@ -841,8 +841,9 @@ function Toasts({ toasts, onClose }) {
 // ====== Main App ======
 export default function RelationshipLab() {
   // players & balances
-  const [player, setPlayer] = useState("A");
-  const [myRole, setMyRole] = useState("A");
+  // Fixed single-user perspective (Игрок A) — переключение экрана/роли удалено
+  const player = 'A';
+  const myRole = 'A';
   // Which set of tubes we are currently viewing/editing: 'mine' | 'partner'
   const [tubeView, setTubeView] = useState('mine');
   const [A, setA] = useState({ ...defaultScale });
@@ -1203,39 +1204,8 @@ export default function RelationshipLab() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">🧪✨ LoveLab</h1>
             <p className="text-neutral-500 text-xs sm:text-sm">Восстановите химию ваших отношений!</p>
           </div>
-          <div className="hidden lg:flex items-center gap-2 flex-wrap">
-            <div className="px-2 py-1 text-xs rounded-full bg-white border">Экран:</div>
-            <div className="flex gap-2">
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${player === "A" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setPlayer("A")}
-              >
-                Игрок A
-              </button>
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${player === "B" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setPlayer("B")}
-              >
-                Игрок B
-              </button>
-            </div>
-            <div className="w-px h-6 bg-neutral-200 mx-1" />
-            <div className="px-2 py-1 text-xs rounded-full bg-white border">Моя роль:</div>
-            <div className="flex gap-2">
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${myRole === "A" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setMyRole("A")}
-              >
-                A
-              </button>
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${myRole === "B" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setMyRole("B")}
-              >
-                B
-              </button>
-            </div>
-            <button onClick={() => setShowSync(true)} className="ml-2 px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">
+          <div className="hidden lg:flex items-center gap-3 flex-wrap">
+            <button onClick={() => setShowSync(true)} className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">
               Онлайн‑синхронизация
             </button>
             <span className={`text-xs px-2 py-1 rounded-full border ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`}>
@@ -1350,7 +1320,7 @@ export default function RelationshipLab() {
               </div>
             </div>
           )}
-          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} />
+          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} activeCategoryId={categoryForHints} />
         </section>
 
         {/* Contribution Stats (moved below cards) */}
@@ -1365,7 +1335,7 @@ export default function RelationshipLab() {
                 </button>
               ))}
             </div>
-            <div className="text-xs text-neutral-500">A = вы ({myRole}), B = партнёр</div>
+            <div className="text-xs text-neutral-500">A = вы, B = партнёр</div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
@@ -1395,9 +1365,7 @@ export default function RelationshipLab() {
                   <div className="text-xs text-neutral-500 mb-1">От: Игрок {item.from}</div>
                   <div className="text-sm font-semibold mb-1 flex items-center gap-2">
                     {item.title}{" "}
-                    {item.weight ? (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{item.weight}</span>
-                    ) : null}
+                    {item.weight ? (() => { const cat = CATEGORIES.find(c=>c.id===item.categoryId); if(!cat) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{item.weight}</span>; const txt = readableTextColor(cat.color); return (<span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: cat.color, color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15)' }}>+{item.weight}</span>); })() : null}
                   </div>
                   <div className="text-xs text-neutral-600 mb-3">{item.desc}</div>
                   <div className="mt-auto flex gap-2">
@@ -1421,10 +1389,7 @@ export default function RelationshipLab() {
         {/* Packs Editor */}
   {/* Packs editor removed */}
 
-        <footer className="hidden lg:block text-xs text-neutral-500 space-y-2 pb-10">
-          <p>⚖️ Балансируйте «пробирки»: если одна растёт слишком быстро, отправляйте карточки в соседние области.</p>
-          <p>🌐 Онлайн‑синхронизация: модальное окно «Онлайн‑синхронизация», обмен OFFER/ANSWER, затем игра с двух устройств.</p>
-        </footer>
+  {/* Footer hints removed per request */}
       </div>
 
       {/* Mobile bottom action bar */}
@@ -1447,14 +1412,7 @@ export default function RelationshipLab() {
         </button>
 
         {/* Мобильные переключатели: экран и роль */}
-        <select className="w-24 border rounded-2xl px-2 py-2 text-xs" value={player} onChange={(e) => setPlayer(e.target.value)}>
-          <option value="A">Экран A</option>
-          <option value="B">Экран B</option>
-        </select>
-        <select className="w-20 border rounded-2xl px-2 py-2 text-xs" value={myRole} onChange={(e) => setMyRole(e.target.value)}>
-          <option value="A">Роль A</option>
-          <option value="B">Роль B</option>
-        </select>
+  {/* Переключатели экрана/роли удалены */}
 
         {/* Синхронизация и статус */}
         <button onClick={() => setShowSync(true)} className="px-3 py-2 rounded-2xl text-xs font-semibold border whitespace-nowrap">

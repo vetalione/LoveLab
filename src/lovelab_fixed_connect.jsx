@@ -25,6 +25,30 @@ const CATEGORIES = [
 
 const defaultScale = { trust: 50, friendship: 50, passion: 50, adventure: 50, respect: 50 };
 
+// Contrast + gradient helpers (ported from main file for badge coloring)
+function readableTextColor(hex){
+  if(!hex) return '#111';
+  const m = hex.replace('#','');
+  const r = parseInt(m.substring(0,2),16);
+  const g = parseInt(m.substring(2,4),16);
+  const b = parseInt(m.substring(4,6),16);
+  const L = (0.2126*r + 0.7152*g + 0.0722*b)/255;
+  return L > 0.62 ? '#111' : '#fff';
+}
+function lighten(hex, pct){ return shift(hex, pct); }
+function darken(hex, pct){ return shift(hex, -pct); }
+function shift(hex, pct){
+  if(!/^#?[0-9a-fA-F]{6}$/.test(hex||'')) return hex;
+  const h = hex.replace('#','');
+  const nums = [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  const f = (c)=> Math.max(0, Math.min(255, Math.round(c + (pct/100)*255)));
+  const out = nums.map(f).map(n=>n.toString(16).padStart(2,'0')).join('');
+  return '#'+out;
+}
+function categoryGradient(color){
+  try { return `linear-gradient(135deg, ${lighten(color,35)} 0%, ${lighten(color,12)} 35%, ${color} 70%, ${darken(color,10)} 100%)`; } catch { return color; }
+}
+
 // Built-in suggestion bank (shortened)
 const BANK = {
   trust: [
@@ -93,7 +117,7 @@ function SliderRow({ model, onChange }) {
   );
 }
 
-function Suggestions({ items, onSend }) {
+function Suggestions({ items, onSend, activeCategoryId }) {
   // items: [{title, desc, weight?}]
   const list = items || [];
   return (
@@ -103,7 +127,7 @@ function Suggestions({ items, onSend }) {
           <div>
             <div className="text-sm font-semibold mb-1 flex items-center gap-2">
               <span>{p.title}</span>
-              {p.weight ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{p.weight}</span> : null}
+              {p.weight ? (()=>{ const catId = p.categoryId || activeCategoryId; const cat = CATEGORIES.find(c=>c.id===catId); if(!cat) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{p.weight}</span>; const txt = readableTextColor(cat.color); return (<span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: cat.color, color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15)' }}>+{p.weight}</span>); })() : null}
             </div>
             <div className="text-xs text-neutral-600">{p.desc}</div>
           </div>
@@ -375,8 +399,9 @@ function Toasts({ toasts, onClose }) {
 // ====== Main App ======
 export default function RelationshipLab() {
   // players & balances
-  const [player, setPlayer] = useState("A");
-  const [myRole, setMyRole] = useState("A");
+  // Переключение экрана и роли удалено — фиксируем A
+  const player = 'A';
+  const myRole = 'A';
   const [A, setA] = useState({ ...defaultScale });
   const [B, setB] = useState({ ...defaultScale });
   // removed legacy locked state
@@ -660,50 +685,15 @@ export default function RelationshipLab() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Лаборатория отношений</h1>
             <p className="text-neutral-500 text-xs sm:text-sm">P2P‑синк • вес карточек • статистика • редактор паков</p>
           </div>
-          <div className="hidden lg:flex items-center gap-2 flex-wrap">
-            <div className="px-2 py-1 text-xs rounded-full bg-white border">Экран:</div>
-            <div className="flex gap-2">
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${player === "A" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setPlayer("A")}
-              >
-                Игрок A
-              </button>
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${player === "B" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setPlayer("B")}
-              >
-                Игрок B
-              </button>
-            </div>
-            <div className="w-px h-6 bg-neutral-200 mx-1" />
-            <div className="px-2 py-1 text-xs rounded-full bg-white border">Моя роль:</div>
-            <div className="flex gap-2">
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${myRole === "A" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setMyRole("A")}
-              >
-                A
-              </button>
-              <button
-                className={`px-4 py-2 rounded-2xl text-sm font-semibold border ${myRole === "B" ? "bg-neutral-900 text-white" : "bg-white"}`}
-                onClick={() => setMyRole("B")}
-              >
-                B
-              </button>
-            </div>
-            <button onClick={() => setShowSync(true)} className="ml-2 px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">
-              Онлайн‑синхронизация
-            </button>
-            <span className={`text-xs px-2 py-1 rounded-full border ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`}>
-              {sync.status}
-            </span>
+          <div className="hidden lg:flex items-center gap-3 flex-wrap">
+            <button onClick={() => setShowSync(true)} className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">Онлайн‑синхронизация</button>
+            <span className={`text-xs px-2 py-1 rounded-full border ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`}>{sync.status}</span>
           </div>
         </header>
 
         {/* Average */}
         <section className="mb-6 sm:mb-8" id="avg">
-          <h2 className="text-base sm:text-lg font-semibold mb-3">Средний баланс</h2>
+          <h2 className="text-base sm:text-lg font-semibold mb-3">Средний баланс (оба игрока)</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {CATEGORIES.map((c) => (
               <div key={c.id} className="flex flex-col items-center p-3 sm:p-4 rounded-2xl border bg-white">
@@ -716,7 +706,7 @@ export default function RelationshipLab() {
         {/* My setup */}
         <section className="mb-8" id="base">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base sm:text-lg font-semibold">Базовая оценка — {player}</h2>
+            <h2 className="text-base sm:text-lg font-semibold">Базовая оценка (вы)</h2>
             {/* lock/unlock removed */}
           </div>
           <SliderRow model={me} onChange={(v) => setMe(v)} />
@@ -746,7 +736,7 @@ export default function RelationshipLab() {
               </button>
             </div>
           </div>
-          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} />
+          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} activeCategoryId={categoryForHints} />
         </section>
 
         {/* Inbox */}
@@ -764,9 +754,7 @@ export default function RelationshipLab() {
                   <div className="text-xs text-neutral-500 mb-1">От: Игрок {item.from}</div>
                   <div className="text-sm font-semibold mb-1 flex items-center gap-2">
                     {item.title}{" "}
-                    {item.weight ? (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{item.weight}</span>
-                    ) : null}
+                    {item.weight ? (()=>{ const cat = CATEGORIES.find(c=>c.id===item.categoryId); if(!cat) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{item.weight}</span>; const txt = readableTextColor(cat.color); return (<span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: cat.color, color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15)' }}>+{item.weight}</span>); })() : null}
                   </div>
                   <div className="text-xs text-neutral-600 mb-3">{item.desc}</div>
                   <div className="mt-auto flex gap-2">
@@ -876,9 +864,7 @@ export default function RelationshipLab() {
                       <div>
                         <div className="font-medium flex items-center gap-2">
                           {c.title}{" "}
-                          {c.weight ? (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{c.weight}</span>
-                          ) : null}
+                          {c.weight ? (()=>{ const cat = CATEGORIES.find(cc=>cc.id===p.categoryId); if(!cat) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{c.weight}</span>; const txt = readableTextColor(cat.color); return (<span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: cat.color, color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15)' }}>+{c.weight}</span>); })() : null}
                         </div>
                         {c.desc && <div className="text-xs text-neutral-600">{c.desc}</div>}
                       </div>
@@ -926,10 +912,7 @@ export default function RelationshipLab() {
           </div>
         </section>
 
-        <footer className="hidden lg:block text-xs text-neutral-500 space-y-2 pb-10">
-          <p>⚖️ Балансируйте «пробирки»: если одна растёт слишком быстро, отправляйте карточки в соседние области.</p>
-          <p>🌐 Онлайн‑синхронизация: модальное окно «Онлайн‑синхронизация», обмен OFFER/ANSWER, затем игра с двух устройств.</p>
-        </footer>
+  {/* Footer paragraphs removed per design update */}
       </div>
 
       {/* Mobile bottom action bar */}
@@ -954,14 +937,7 @@ export default function RelationshipLab() {
         </button>
 
         {/* Мобильные переключатели: экран и роль */}
-        <select className="w-24 border rounded-2xl px-2 py-2 text-xs" value={player} onChange={(e) => setPlayer(e.target.value)}>
-          <option value="A">Экран A</option>
-          <option value="B">Экран B</option>
-        </select>
-        <select className="w-20 border rounded-2xl px-2 py-2 text-xs" value={myRole} onChange={(e) => setMyRole(e.target.value)}>
-          <option value="A">Роль A</option>
-          <option value="B">Роль B</option>
-        </select>
+  {/* Переключатели экрана и роли удалены */}
 
         {/* Синхронизация и статус */}
         <button onClick={() => setShowSync(true)} className="px-3 py-2 rounded-2xl text-xs font-semibold border whitespace-nowrap">
