@@ -172,7 +172,7 @@ function EditableTubes({ model, partner, avg, onChange, disabled, onSelectCatego
   const [hovered, setHovered] = useState(null);
 
   const startDrag = (e, catId) => {
-    if (disabled) return;
+  if (disabled) return;
     e.preventDefault();
   if(onSelectCategory) onSelectCategory(catId);
     const target = e.currentTarget;
@@ -196,7 +196,7 @@ function EditableTubes({ model, partner, avg, onChange, disabled, onSelectCatego
   };
 
   const handleKey = (e, catId) => {
-    if (disabled) return;
+  if (disabled) return;
     const delta = (e.key === 'ArrowUp') ? 1 : (e.key === 'ArrowDown') ? -1 : 0;
     if (delta !== 0) {
       e.preventDefault();
@@ -235,10 +235,10 @@ function EditableTubes({ model, partner, avg, onChange, disabled, onSelectCatego
               type="button"
               className={"relative h-40 w-16 rounded-[22px] border-2 transition-colors outline-none " + (disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer focus:ring-2 focus:ring-offset-1 ' + (selectedCategory===c.id? 'ring-neutral-800 border-neutral-800' : 'focus:ring-neutral-400'))}
               style={{ borderColor: c.color + '80' }}
-              onPointerDown={(e)=>startDrag(e,c.id)}
-              onTouchStart={(e)=>startDrag(e,c.id)}
-              onKeyDown={(e)=>handleKey(e,c.id)}
-              onClick={()=> { if(onSelectCategory) onSelectCategory(c.id); }}
+              onPointerDown={(e)=>!disabled && startDrag(e,c.id)}
+              onTouchStart={(e)=>!disabled && startDrag(e,c.id)}
+              onKeyDown={(e)=>!disabled && handleKey(e,c.id)}
+              onClick={()=> { if(disabled) return; if(onSelectCategory) onSelectCategory(c.id); }}
               role="slider"
               aria-valuemin={0}
               aria-valuemax={100}
@@ -287,7 +287,7 @@ function shift(hex, pct) {
   return '#'+out;
 }
 
-function SliderRow({ model, onChange, onSelectCategory }) {
+function SliderRow({ model, onChange, onSelectCategory, disabled }) {
   const [testCat, setTestCat] = useState(null); // category id currently in test
   const [testIndex, setTestIndex] = useState(0);
   const [testAnswers, setTestAnswers] = useState([]); // numbers 1-10
@@ -364,8 +364,9 @@ function SliderRow({ model, onChange, onSelectCategory }) {
               min={0}
               max={100}
               value={val}
-              onChange={(e) => { onChange({ ...model, [c.id]: Number(e.target.value) }); if(onSelectCategory) onSelectCategory(c.id); }}
-              className="w-full touch-none"
+              disabled={disabled}
+              onChange={(e) => { if(disabled) return; onChange({ ...model, [c.id]: Number(e.target.value) }); if(onSelectCategory) onSelectCategory(c.id); }}
+              className={`w-full touch-none ${disabled? 'opacity-40 cursor-not-allowed' : ''}`}
               style={{ '--c': c.color, '--p': `${val}%`, accentColor: c.color }}
             />
             <div className="flex items-center justify-between mt-2">
@@ -376,8 +377,9 @@ function SliderRow({ model, onChange, onSelectCategory }) {
             <div className="mt-4 flex justify-center">
               <button
                 type="button"
-                onClick={()=>startTest(c.id)}
-                className="text-[11px] px-3 py-1.5 rounded-full border bg-white/90 hover:bg-white active:scale-[0.97] font-semibold shadow-sm relative"
+                onClick={()=>!disabled && startTest(c.id)}
+                disabled={disabled}
+                className="text-[11px] px-3 py-1.5 rounded-full border bg-white/90 hover:bg-white active:scale-[0.97] font-semibold shadow-sm relative disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{
                   borderColor: c.color,
                   boxShadow: `0 0 0 1px ${c.color} inset, 0 1px 2px rgba(0,0,0,0.15)`
@@ -1160,7 +1162,7 @@ export default function RelationshipLab() {
               partner={tubesPartner}
               avg={avg}
               onChange={(v)=> setTubesModel(v)}
-              disabled={false}
+              disabled={tubeView==='partner'}
               onSelectCategory={(id)=> setCategoryForHints(id)}
               selectedCategory={categoryForHints}
             />
@@ -1169,6 +1171,7 @@ export default function RelationshipLab() {
             model={tubesModel}
             onChange={(v) => setTubesModel(v)}
             onSelectCategory={(id)=> setCategoryForHints(id)}
+            disabled={tubeView==='partner'}
           />
         </section>
 
