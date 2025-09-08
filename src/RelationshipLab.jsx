@@ -29,14 +29,19 @@ function CategoryIcon({ id, color, size = 22, stroke = 1.8 }) {
   const col = { color };
   switch (id) {
     case 'trust': // shield-heart
+      // New: minimal handshake (symbolизирует доверие / соглашение)
       return (
         <div className="flex items-center justify-center" style={col} aria-hidden>
           <svg {...common} viewBox="0 0 24 24">
-            <path d="M12 3l7 3v5.2c0 4.1-2.9 7.9-7 9-4.1-1.1-7-4.9-7-9V6l7-3z" />
-            <path d="M9.7 11.3a2.1 2.1 0 013-3 2.1 2.1 0 013 3L12.7 14a1 1 0 01-1.4 0l-1.6-1.6z" strokeLinejoin="round" />
+            <path d="M3 12l3.2-3.2a2.4 2.4 0 013.4 0L13 12.2a1.8 1.8 0 002.5 0L20 8" strokeLinecap="round" />
+            <path d="M7.5 12.5l2.2 2.2a2.2 2.2 0 003.1 0L14 13.7" strokeLinecap="round" />
+            <path d="M10.2 9.8l3 3" strokeLinecap="round" />
           </svg>
         </div>
       );
+      // Alt ideas:
+      // 1) Overlapping circles (венн) + small heart: two commitments
+      // 2) Open padlock (НЕ используем, т.к. убирали лока ранее)
     case 'friendship': // two users
       return (
         <div className="flex items-center justify-center" style={col} aria-hidden>
@@ -67,14 +72,20 @@ function CategoryIcon({ id, color, size = 22, stroke = 1.8 }) {
         </div>
       );
     case 'respect': // hands/support
+      // New: stylized pillar (устойчивость, поддержка, уважение)
       return (
         <div className="flex items-center justify-center" style={col} aria-hidden>
           <svg {...common} viewBox="0 0 24 24">
-            <path d="M8 13l3 3 5-5" />
-            <path d="M5 8l4-4h6l4 4v6l-4 4H9l-4-4V8z" />
+            <path d="M5 6h14M7 6l1.1-2h7.8L17 6" strokeLinecap="round" />
+            <path d="M6 10h12" />
+            <path d="M9 10v6M12 10v6M15 10v6" />
+            <path d="M5 18h14M6 22h12" />
           </svg>
         </div>
       );
+      // Alt ideas:
+      // 1) Laurel wreath (признание)
+      // 2) Two hands forming support arc
     default:
       return null;
   }
@@ -941,8 +952,8 @@ export default function RelationshipLab() {
         {/* Header */}
         <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 sm:mb-6">
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Лаборатория отношений</h1>
-            <p className="text-neutral-500 text-xs sm:text-sm">P2P‑синк • вес карточек • статистика • редактор паков</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">🧪✨ LoveLab</h1>
+            <p className="text-neutral-500 text-xs sm:text-sm">Восстановите химию ваших отношений!</p>
           </div>
           <div className="hidden lg:flex items-center gap-2 flex-wrap">
             <div className="px-2 py-1 text-xs rounded-full bg-white border">Экран:</div>
