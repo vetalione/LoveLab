@@ -296,6 +296,8 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   const cardRefs = useRef({});
   const suppressScrollSelectRef = useRef(false);
   // (debounce removed) immediate category selection on swipe
+  const swipePendingRef = useRef(null);
+  const swipeTimerRef = useRef(null);
 
   const testQuestions = useMemo(()=>{
     if(!testCat) return [];
@@ -388,8 +390,14 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       const dist = Math.abs(elCenter - center);
       if(dist < bestDist){ bestDist = dist; bestId = c.id; }
     }
-  if(suppressScrollSelectRef.current) return; // ignore during programmatic scroll
-  if(bestId && bestId !== selectedCategory && onSelectCategory) onSelectCategory(bestId);
+    if(suppressScrollSelectRef.current) return; // ignore during programmatic scroll
+    // store best and debounce to end of swipe (inactivity window)
+    swipePendingRef.current = bestId;
+    clearTimeout(swipeTimerRef.current);
+    swipeTimerRef.current = setTimeout(()=>{
+      const id = swipePendingRef.current;
+      if(id && id !== selectedCategory && onSelectCategory) onSelectCategory(id);
+    }, 120);
   }, [onSelectCategory, selectedCategory]);
 
   useEffect(() => {
@@ -413,7 +421,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
     window.addEventListener('resize', onResize);
     // initial
     handleScroll();
-  return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); window.removeEventListener('lab-scroll-category', handler); cancelAnimationFrame(rAF); };
+  return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); window.removeEventListener('lab-scroll-category', handler); cancelAnimationFrame(rAF); clearTimeout(swipeTimerRef.current); };
   }, [handleScroll]);
 
   const renderCard = (c, mobile=false) => {
