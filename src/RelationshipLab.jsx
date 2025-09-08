@@ -470,8 +470,14 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   return (
     <>
       {/* Mobile carousel */}
-      <div className="sm:hidden -mx-3 px-3" ref={mobileRef} style={{ WebkitOverflowScrolling:'touch' }}>
-        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-none">{CATEGORIES.map(c=>renderCard(c,true))}</div>
+      <div className="sm:hidden -mx-3 px-3">
+        <div
+          ref={mobileRef}
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-none"
+          style={{ WebkitOverflowScrolling:'touch' }}
+        >
+          {CATEGORIES.map(c=>renderCard(c,true))}
+        </div>
       </div>
       {/* Desktop grid */}
       <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
