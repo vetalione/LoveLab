@@ -543,7 +543,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   );
 }
 
-function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, onGenerateAI }) {
+function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, onGenerateAI, remainingAI }) {
   // items: [{id?, title, desc, weight?, source, packId?, categoryId?}]
   const list = items || [];
   const [stage, setStage] = useState('idle'); // idle | weight | mode | manual
@@ -557,8 +557,12 @@ function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, o
       <div className="hidden lg:flex rounded-2xl border border-dashed p-4 bg-white/60 backdrop-blur-sm shadow-sm flex-col justify-between min-h-[180px]">
         {stage==='idle' && (
           <button type="button" onClick={()=>setStage('weight')} className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500 hover:text-neutral-800">
-            <div className="w-14 h-14 rounded-2xl border-2 border-neutral-300 flex items-center justify-center text-3xl font-light">+</div>
-            <div className="text-sm font-medium">Создать карточку</div>
+            <div className="relative">
+              <div className="absolute -inset-1 rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[spin_8s_linear_infinite] opacity-70 blur-[1px]"></div>
+              <div className="absolute -inset-1 rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[pulse_3s_ease-in-out_infinite] opacity-40 blur-md"></div>
+              <div className="relative w-14 h-14 rounded-2xl border-2 border-neutral-300 flex items-center justify-center text-3xl font-light bg-white/90">+</div>
+            </div>
+            <div className="text-sm font-medium">✨ Сгенерировать идею от ИИ</div>
           </button>
         )}
         {stage==='weight' && (
@@ -574,9 +578,14 @@ function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, o
         )}
         {stage==='mode' && (
           <div className="flex-1 flex flex-col">
-            <div className="text-xs font-semibold mb-3 text-neutral-500">Вес: <span className="font-bold">+{wChoice}</span></div>
+            <div className="text-xs font-semibold mb-1 text-neutral-500">Вес: <span className="font-bold">+{wChoice}</span></div>
+            <div className="text-[11px] text-neutral-500 mb-3">Осталось генераций: {remainingAI ?? '—'}</div>
             <div className="flex flex-col gap-2 mb-3">
-              <button type="button" onClick={()=>{ onGenerateAI?.(wChoice); reset(); }} className="px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white active:scale-[0.98]">AI генерация</button>
+              <div className="relative">
+                <div className="absolute -inset-[2px] rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[spin_8s_linear_infinite] opacity-70 blur-[1px]"></div>
+                <div className="absolute -inset-[2px] rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[pulse_3s_ease-in-out_infinite] opacity-40 blur-md"></div>
+                <button type="button" onClick={()=>{ onGenerateAI?.(wChoice); reset(); }} className="relative w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white active:scale-[0.98]">AI генерация</button>
+              </div>
               <button type="button" onClick={()=>setStage('manual')} className="px-4 py-3 rounded-2xl text-sm font-semibold border bg-white hover:bg-neutral-100">Вручную</button>
             </div>
             <button type="button" onClick={()=>setStage('weight')} className="mt-auto text-[11px] text-neutral-500 hover:text-neutral-700 self-start">Назад</button>
@@ -1373,6 +1382,7 @@ export default function RelationshipLab() {
               notify('Добавлена карточка', { type:'success', msg: card.title });
             }}
             onGenerateAI={(weight)=>{ addRandomSuggestion(weight); }}
+            remainingAI={remainingAI ? remainingAI[categoryForHints] : undefined}
           />
         </section>
 
