@@ -295,8 +295,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   const mobileRef = useRef(null);
   const cardRefs = useRef({});
   const suppressScrollSelectRef = useRef(false);
-  const scrollSelectTimerRef = useRef(null);
-  const pendingBestRef = useRef(null);
+  // (debounce removed) immediate category selection on swipe
 
   const testQuestions = useMemo(()=>{
     if(!testCat) return [];
@@ -389,15 +388,8 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       const dist = Math.abs(elCenter - center);
       if(dist < bestDist){ bestDist = dist; bestId = c.id; }
     }
-    if(suppressScrollSelectRef.current) return; // ignore during programmatic scroll
-    if(bestId){
-      pendingBestRef.current = bestId;
-      clearTimeout(scrollSelectTimerRef.current);
-      scrollSelectTimerRef.current = setTimeout(()=>{
-        const id = pendingBestRef.current;
-        if(id && id !== selectedCategory && onSelectCategory) onSelectCategory(id);
-      },140); // slight debounce so snap finishes
-    }
+  if(suppressScrollSelectRef.current) return; // ignore during programmatic scroll
+  if(bestId && bestId !== selectedCategory && onSelectCategory) onSelectCategory(bestId);
   }, [onSelectCategory, selectedCategory]);
 
   useEffect(() => {
@@ -421,7 +413,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
     window.addEventListener('resize', onResize);
     // initial
     handleScroll();
-  return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); window.removeEventListener('lab-scroll-category', handler); cancelAnimationFrame(rAF); clearTimeout(scrollSelectTimerRef.current); };
+  return () => { cont.removeEventListener('scroll', handleScroll); window.removeEventListener('resize', onResize); window.removeEventListener('lab-scroll-category', handler); cancelAnimationFrame(rAF); };
   }, [handleScroll]);
 
   const renderCard = (c, mobile=false) => {
