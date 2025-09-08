@@ -1455,14 +1455,32 @@ export default function RelationshipLab() {
                 <button type="button" onClick={sync.startHost} className="mb-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
                   Сгенерировать OFFER
                 </button>
-                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs" value={sync.offerText} readOnly placeholder="Скопируйте OFFER партнёру" onFocus={(e)=>e.target.select()} />
+                <div className="relative mb-2">
+                  <textarea className="w-full h-28 border rounded-2xl p-2 pr-16 text-xs" value={sync.offerText} readOnly placeholder="Скопируйте OFFER партнёру" onFocus={(e)=>e.target.select()} />
+                  {sync.offerText && (
+                    <button
+                      type="button"
+                      onClick={() => { try { navigator.clipboard.writeText(sync.offerText); notify('Скопировано', { type:'success', msg:'OFFER' }); } catch { try { const ta = document.createElement('textarea'); ta.value = sync.offerText; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); notify('Скопировано', { type:'success', msg:'OFFER' }); } catch {} } }}
+                      className="absolute top-2 right-2 px-2 py-1 rounded-md text-[10px] font-semibold border bg-white hover:bg-neutral-100"
+                    >Copy</button>
+                  )}
+                </div>
                 <div className="mt-2 text-xs text-neutral-600">Вставьте ANSWER от партнёра:</div>
-                <textarea
-                  className="w-full h-28 border rounded-2xl p-2 text-xs"
-                  placeholder="Вставьте ANSWER"
-                  value={sync.answerText}
-                  onChange={(e) => sync.setAnswerText(e.target.value)}
-                />
+                <div className="relative">
+                  <textarea
+                    className="w-full h-28 border rounded-2xl p-2 pr-16 text-xs"
+                    placeholder="Вставьте ANSWER"
+                    value={sync.answerText}
+                    onChange={(e) => sync.setAnswerText(e.target.value)}
+                  />
+                  {sync.answerText && (
+                    <button
+                      type="button"
+                      onClick={() => { try { navigator.clipboard.writeText(sync.answerText); notify('Скопировано', { type:'success', msg:'ANSWER (ввод)'}); } catch {} }}
+                      className="absolute top-2 right-2 px-2 py-1 rounded-md text-[10px] font-semibold border bg-white hover:bg-neutral-100"
+                    >Copy</button>
+                  )}
+                </div>
                 <button type="button" onClick={() => sync.acceptAnswer(sync.answerText)} className="mt-2 px-4 py-2 rounded-2xl text-xs font-semibold border">
                   Подтвердить ANSWER
                 </button>
@@ -1478,7 +1496,16 @@ export default function RelationshipLab() {
                 <button type="button" onClick={() => sync.startJoiner(sync.offerText)} className="mt-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
                   Сгенерировать ANSWER
                 </button>
-                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs mt-2" value={sync.answerText} readOnly placeholder="Скопируйте ANSWER и отправьте хосту" onFocus={(e)=>e.target.select()} />
+                <div className="relative mt-2">
+                  <textarea className="w-full h-28 border rounded-2xl p-2 pr-16 text-xs" value={sync.answerText} readOnly placeholder="Скопируйте ANSWER и отправьте хосту" onFocus={(e)=>e.target.select()} />
+                  {sync.answerText && (
+                    <button
+                      type="button"
+                      onClick={() => { try { navigator.clipboard.writeText(sync.answerText); notify('Скопировано', { type:'success', msg:'ANSWER' }); } catch {} }}
+                      className="absolute top-2 right-2 px-2 py-1 rounded-md text-[10px] font-semibold border bg-white hover:bg-neutral-100"
+                    >Copy</button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="mt-3 text-xs">
