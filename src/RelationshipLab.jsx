@@ -294,6 +294,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   const [testAnswers, setTestAnswers] = useState([]); // numbers 1-10
   const mobileRef = useRef(null);
   const cardRefs = useRef({});
+  const suppressScrollSelectRef = useRef(false);
 
   const testQuestions = useMemo(()=>{
     if(!testCat) return [];
@@ -362,7 +363,10 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
     if(!media.matches) return; // only mobile
     const el = cardRefs.current[selectedCategory];
     if(el) {
+      suppressScrollSelectRef.current = true;
       el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      // release after animation
+      setTimeout(()=>{ suppressScrollSelectRef.current = false; }, 400);
     }
   }, [selectedCategory]);
 
@@ -383,7 +387,8 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       const dist = Math.abs(elCenter - center);
       if(dist < bestDist){ bestDist = dist; bestId = c.id; }
     }
-    if(bestId && bestId !== selectedCategory && onSelectCategory) onSelectCategory(bestId);
+  if(suppressScrollSelectRef.current) return; // ignore during programmatic scroll
+  if(bestId && bestId !== selectedCategory && onSelectCategory) onSelectCategory(bestId);
   }, [onSelectCategory, selectedCategory]);
 
   useEffect(() => {
@@ -395,7 +400,11 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
     const handler = (e)=>{
       const id = e.detail;
       const el = cardRefs.current[id];
-      if(el) el.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+      if(el){
+        suppressScrollSelectRef.current = true;
+        el.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+        setTimeout(()=>{ suppressScrollSelectRef.current = false; }, 400);
+      }
     };
     window.addEventListener('lab-scroll-category', handler);
     let rAF;
