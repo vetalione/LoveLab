@@ -924,27 +924,38 @@ export default function RelationshipLab() {
     }
   }, []);
 
-  // ====== Derived Statistics ======
+  // ====== Derived Statistics (overall + per category) ======
   // history entries: { id, week, categoryId, delta, from }
-  const stats = useMemo(() => {
-    const base = { A: { sent:0, accepted:0, totalWeight:0 }, B: { sent:0, accepted:0, totalWeight:0 } };
-    // Sent we infer from inbox merges + history origin (from field when card accepted)
-    // Counting sent: scan all current and past cards: history.from increments sent & accepted; inbox items from a player increment sent only.
-    const sentTemp = { A:0, B:0 };
-    inboxA.forEach(c=>{ if(c.from==='A') sentTemp.A++; if(c.from==='B') sentTemp.B++; });
-    inboxB.forEach(c=>{ if(c.from==='A') sentTemp.A++; if(c.from==='B') sentTemp.B++; });
-    history.forEach(h=>{ sentTemp[h.from] = (sentTemp[h.from]||0)+1; });
-    base.A.sent = sentTemp.A; base.B.sent = sentTemp.B;
-    history.forEach(h=>{ if(h.from==='A'){ base.A.accepted++; base.A.totalWeight += h.delta; } else if(h.from==='B'){ base.B.accepted++; base.B.totalWeight += h.delta; } });
-    return base;
+  const { overallStats, categoryStats } = useMemo(() => {
+    const emptyPair = () => ({ A:{ sent:0, accepted:0, totalWeight:0 }, B:{ sent:0, accepted:0, totalWeight:0 } });
+    const overall = emptyPair();
+    const perCat = Object.fromEntries(CATEGORIES.map(c => [c.id, emptyPair()]));
+    // Pending (inboxes) contribute to 'sent' only
+    function addPending(arr){
+      arr.forEach(c => {
+        if(!c || !c.from) return;
+        const bucketOverall = overall[c.from];
+        bucketOverall.sent++;
+        if (c.categoryId && perCat[c.categoryId]) {
+          perCat[c.categoryId][c.from].sent++;
+        }
+      });
+    }
+    addPending(inboxA); addPending(inboxB);
+    // Accepted history contributes to sent + accepted + weight
+    history.forEach(h => {
+      const from = h.from; if(!from) return;
+      overall[from].sent++; overall[from].accepted++; overall[from].totalWeight += h.delta || 0;
+      if (h.categoryId && perCat[h.categoryId]) {
+        perCat[h.categoryId][from].sent++; perCat[h.categoryId][from].accepted++; perCat[h.categoryId][from].totalWeight += h.delta || 0;
+      }
+    });
+    return { overallStats: overall, categoryStats: perCat };
   }, [inboxA, inboxB, history]);
 
-  const [statsView, setStatsView] = useState('sent'); // sent | accepted | weight
-  const statsPairs = useMemo(()=>{
-    if (statsView==='sent') return { label:'Отправлено идей', A: stats.A.sent, B: stats.B.sent };
-    if (statsView==='accepted') return { label:'Принято идей', A: stats.A.accepted, B: stats.B.accepted };
-    return { label:'Суммарный вес', A: stats.A.totalWeight, B: stats.B.totalWeight };
-  }, [statsView, stats]);
+  // Current filter: '_all' for overall, else category id
+  const [statsFilter, setStatsFilter] = useState('_all');
+  const currentStats = statsFilter === '_all' ? overallStats : categoryStats[statsFilter] || overallStats;
 
   function StatBar({ label, a, b }){
     const total = (a+b)||1;
@@ -1077,22 +1088,25 @@ export default function RelationshipLab() {
         <section className="mb-10" id="contrib-stats">
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             <h2 className="text-base sm:text-lg font-semibold">Статистика вклада</h2>
-            <div className="flex gap-2 bg-white/80 rounded-2xl p-1 border">
-              {['sent','accepted','weight'].map(mode => (
-                <button key={mode} onClick={()=>setStatsView(mode)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${statsView===mode? 'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`}>{mode==='sent'?'Отправлено':mode==='accepted'?'Принято':'Вес'}</button>
+            <div className="flex gap-1 bg-white/80 rounded-2xl p-1 border">
+              <button onClick={()=>setStatsFilter('_all')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${statsFilter==='_all'?'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`}>Общее</button>
+              {CATEGORIES.map(c => (
+                <button key={c.id} onClick={()=>setStatsFilter(c.id)} className={`px-2 py-1.5 rounded-xl text-xs font-semibold transition flex items-center justify-center ${statsFilter===c.id?'bg-neutral-900 text-white':'text-neutral-700 hover:bg-neutral-200/60'}`} title={c.label} aria-label={c.label}>
+                  <CategoryIcon id={c.id} color={statsFilter===c.id? '#fff' : c.color} />
+                </button>
               ))}
             </div>
             <div className="text-xs text-neutral-500">A = вы ({myRole}), B = партнёр</div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label={statsPairs.label} a={statsPairs.A} b={statsPairs.B} />
+              <StatBar label="Отправлено идей" a={currentStats.A.sent} b={currentStats.B.sent} />
             </div>
             <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label="Принято идей" a={stats.A.accepted} b={stats.B.accepted} />
+              <StatBar label="Принято идей" a={currentStats.A.accepted} b={currentStats.B.accepted} />
             </div>
             <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
-              <StatBar label="Суммарный вес" a={stats.A.totalWeight} b={stats.B.totalWeight} />
+              <StatBar label="Суммарный вес" a={currentStats.A.totalWeight} b={currentStats.B.totalWeight} />
             </div>
           </div>
         </section>
