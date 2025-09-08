@@ -288,12 +288,75 @@ function shift(hex, pct) {
 }
 
 function SliderRow({ model, onChange, onSelectCategory }) {
+  const [testCat, setTestCat] = useState(null); // category id currently in test
+  const [testIndex, setTestIndex] = useState(0);
+  const [testAnswers, setTestAnswers] = useState([]); // numbers 1-10
+
+  const testQuestions = useMemo(()=>{
+    if(!testCat) return [];
+    // Simple placeholder statements; could be externalized/localized later
+    const base = {
+      trust: [
+        'Я могу открыто говорить о своих страхах',
+        'Мы честны даже в мелочах',
+        'Я чувствую принятие без осуждения',
+        'Мы обсуждаем трудные темы спокойно',
+        'Я могу признать ошибку не боясь реакции',
+        'Партнёр делится внутренними переживаниями',
+        'Я ощущаю эмоциональную безопасность',
+        'Мы доверяем обещаниям друг друга',
+        'Я не боюсь быть уязвимым',
+        'Чувство доверия растёт с течением времени'
+      ],
+      friendship: [
+        'Мы проводим время в совместных делах', 'Мы поддерживаем хобби друг друга', 'Лёгкость и юмор присутствуют часто', 'Мне комфортно просто «ничего не делать» вместе', 'Мы знаем бытовые предпочтения друг друга', 'Мы помним важные мелочи друг о нём/ней', 'Мы обсуждаем планы на неделю', 'Мы делимся новостями дня', 'Мы решаем мелкие задачи как команда', 'Я чувствую партнёрство каждый день'
+      ],
+      passion: [
+        'Есть флирт в повседневности', 'Мы устраиваем мини‑свидания', 'Я удовлетворён(а) романтической составляющей', 'Есть физическая нежность без ожиданий', 'Мы обсуждаем желания открыто', 'Эксперименты приветствуются', 'Есть ощущение взаимного влечения', 'Мы уделяем время интимной близости', 'Я чувствую себя желанным(ой)', 'Страсть оживает регулярно'
+      ],
+      adventure: [
+        'Мы пробуем новые активности', 'Мы выходим из рутины сознательно', 'Есть совместные мини‑путешествия', 'Мы строим планы впечатлений', 'Мы делаем «необычные» вещи спонтанно', 'Есть чувство совместного исследования', 'Я чувствую свежесть в отношениях', 'Мы делимся мечтами о будущих приключениях', 'Иногда рискуем безопасно', 'Есть что вспомнить за последний месяц'
+      ],
+      respect: [
+        'Мои границы признаются', 'Я уважаю границы партнёра', 'Мы поддерживаем цели друг друга', 'Есть признание усилий', 'Мы говорим без унижения', 'Конфликты без перехода на личности', 'Решения принимаем учитывая обоих', 'Есть взаимная благодарность', 'Я чувствую опору в сложностях', 'Мы ценим различия'
+      ]
+    };
+    return base[testCat] || [];
+  }, [testCat]);
+
+  const currentQuestion = testQuestions[testIndex];
+
+  function startTest(catId){
+    setTestCat(catId); setTestIndex(0); setTestAnswers([]);
+  }
+  function answer(value){
+    const next = [...testAnswers];
+    next[testIndex] = value; // just store, no auto‑advance
+    setTestAnswers(next);
+  }
+  function nextQuestion(){
+    // ensure answered
+    if(testAnswers[testIndex] == null) return; // ignore click until answer selected
+    if(testIndex < testQuestions.length - 1){
+      setTestIndex(i=>i+1);
+    } else {
+      // finalize
+      const filled = testAnswers.filter(v=>typeof v === 'number');
+      if(!filled.length){ setTestCat(null); return; }
+      const avg = filled.reduce((a,b)=>a+b,0)/filled.length; // 1..10
+      const percent = Math.round(((avg-1)/9)*100);
+      onChange({ ...model, [testCat]: percent });
+      if(onSelectCategory) onSelectCategory(testCat);
+      setTestCat(null);
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {CATEGORIES.map((c) => {
         const val = model[c.id];
         return (
-          <div key={c.id} className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm">
+          <div key={c.id} className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm relative">
             <div className="text-sm font-semibold mb-1">{c.label}</div>
             <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
             <input
@@ -310,9 +373,47 @@ function SliderRow({ model, onChange, onSelectCategory }) {
               <div className="text-xs font-medium">{val}%</div>
               <div className="text-xs text-neutral-500">100</div>
             </div>
+            <div className="mt-4 flex justify-center">
+              <button type="button" onClick={()=>startTest(c.id)} className="text-[11px] px-3 py-1.5 rounded-full border bg-white/90 hover:bg-white active:scale-[0.97] font-semibold shadow-sm">
+                Пройти тест
+              </button>
+            </div>
           </div>
         );
       })}
+      {testCat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl relative">
+            <div className="absolute top-2 right-2">
+              <button onClick={()=>setTestCat(null)} className="w-7 h-7 flex items-center justify-center rounded-full border text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100">×</button>
+            </div>
+            {(() => { const cat = CATEGORIES.find(c=>c.id===testCat); if(!cat) return null; return (
+              <div className="mb-3 flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full shadow" style={{ background: categoryGradient(cat.color) }} />
+                <div className="text-xs font-semibold tracking-wide uppercase" style={{ color: darken(cat.color,25) }}>{cat.label}</div>
+              </div>
+            ); })()}
+            <div className="text-[11px] font-medium mb-2 text-neutral-500">Оцените согласие от 1 до 10</div>
+            <div className="text-sm font-semibold mb-5 min-h-[52px] leading-snug">{currentQuestion}</div>
+            {(() => { const cat = CATEGORIES.find(c=>c.id===testCat); const col = cat?.color; const val = testAnswers[testIndex] ?? 5; return (
+              <div className="mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-neutral-400">1</span>
+                  <input type="range" min={1} max={10} value={val} onChange={(e)=>answer(Number(e.target.value))} className="flex-1 h-2" style={{ accentColor: col, background: `linear-gradient(90deg, ${lighten(col,35)} 0%, ${col} 100%)`, borderRadius: '9999px' }} />
+                  <span className="text-[10px] text-neutral-400">10</span>
+                </div>
+                <div className="mt-2 text-center text-[11px] font-medium" style={{ color: darken(col||'#888',20) }}>Текущее значение: {val}</div>
+              </div>
+            ); })()}
+            <div className="flex items-center justify-between text-[11px] text-neutral-500">
+              <div>Вопрос {testIndex+1} / {testQuestions.length}</div>
+              <button type="button" onClick={nextQuestion} disabled={testAnswers[testIndex] == null} className="px-4 py-2 rounded-2xl text-xs font-semibold shadow-sm active:scale-[0.97] disabled:opacity-40" style={{ background: categoryGradient(CATEGORIES.find(c=>c.id===testCat)?.color || '#ccc'), color: readableTextColor(CATEGORIES.find(c=>c.id===testCat)?.color || '#ccc'), boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                {testIndex < testQuestions.length-1 ? 'Далее' : 'Завершить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -942,8 +1043,6 @@ export default function RelationshipLab() {
   // Current filter: '_all' for overall, else category id
   const [statsFilter, setStatsFilter] = useState('_all');
   const currentStats = statsFilter === '_all' ? overallStats : categoryStats[statsFilter] || overallStats;
-  // Mobile partner tubes swipe toggle
-  const [showPartnerTubes, setShowPartnerTubes] = useState(false);
 
   function StatBar({ label, a, b }){
     const total = (a+b)||1;
@@ -1026,54 +1125,9 @@ export default function RelationshipLab() {
           </div>
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs text-neutral-500 lg:block hidden">Клик или потяни по колбе чтобы задать значение</div>
-              <div className="text-[10px] text-neutral-500 lg:hidden">Свайп влево чтобы увидеть баланс партнёра</div>
-              {showPartnerTubes && (
-                <button onClick={()=> setShowPartnerTubes(false)} className="lg:hidden ml-auto text-[10px] px-2 py-1 rounded-full border bg-white">Мои значения</button>
-              )}
+              <div className="text-xs text-neutral-500">Клик или потяни по колбе чтобы задать значение</div>
             </div>
-            {/* Swipe container (mobile only) */}
-            <div
-              className="relative select-none"
-              style={{ touchAction: 'pan-y' }}
-              onTouchStart={(e)=>{ const t=e.touches[0]; e.currentTarget.dataset.sx=t.clientX; e.currentTarget.dataset.sy=t.clientY; e.currentTarget.dataset.st=Date.now(); }}
-              onTouchEnd={(e)=>{ const sx=Number(e.currentTarget.dataset.sx||0); const sy=Number(e.currentTarget.dataset.sy||0); const st=Number(e.currentTarget.dataset.st||0); const t=e.changedTouches[0]; const dx=t.clientX-sx; const dy=Math.abs(t.clientY-sy); const dt=Date.now()-st; if(window.innerWidth<1024 && dt<800 && Math.abs(dx)>50 && dy<60){ if(dx<0){ setShowPartnerTubes(true); } else { setShowPartnerTubes(false); } } }}
-            >
-              {/* Active view */}
-              <div className="lg:block">
-                {!showPartnerTubes && (
-                  <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} onSelectCategory={(id)=> setCategoryForHints(id)} selectedCategory={categoryForHints} />
-                )}
-                {showPartnerTubes && (
-                  <div className="animate-fade-in">
-                    {sync.status === 'connected' ? (
-                      <>
-                        <div className="text-[10px] text-neutral-500 mb-1 lg:hidden">Баланс партнёра · свайп вправо чтобы вернуться</div>
-                        <EditableTubes model={partner} partner={partner} avg={avg} onChange={()=>{}} disabled={true} selectedCategory={categoryForHints} />
-                      </>
-                    ) : (
-                      <div className="rounded-2xl border bg-white/70 p-4 text-center flex flex-col items-center gap-3">
-                        <div className="text-xs font-medium">Ваш партнёр не подключен</div>
-                        <div className="flex gap-2 w-full justify-center">
-                          <button onClick={()=> setShowPartnerTubes(false)} className="px-3 py-1.5 rounded-2xl text-xs font-semibold border bg-white">Мои значения</button>
-                          <button onClick={()=> setShowSync(true)} className="px-3 py-1.5 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">Онлайн‑синк</button>
-                        </div>
-                        <div className="grid grid-cols-5 gap-2 w-full mt-2">
-                          {CATEGORIES.map(c=> (
-                            <div key={c.id} className="flex flex-col items-center gap-1">
-                              <div className="w-12 h-20 rounded-xl bg-gradient-to-b from-neutral-200 to-neutral-100 border border-neutral-300 flex items-end overflow-hidden">
-                                <div className="w-full bg-neutral-300 h-[50%]" />
-                              </div>
-                              <div className="text-[10px] text-neutral-500 text-center leading-tight px-1">{c.label.split(' ')[0]}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            <EditableTubes model={me} partner={partner} avg={avg} onChange={(v)=> setMe(v)} disabled={false} onSelectCategory={(id)=> setCategoryForHints(id)} selectedCategory={categoryForHints} />
           </div>
           <SliderRow model={me} onChange={(v) => setMe(v)} onSelectCategory={(id)=> setCategoryForHints(id)} />
         </section>
