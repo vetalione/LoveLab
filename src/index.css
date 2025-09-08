@@ -75,3 +75,16 @@ input[type=range]:active::-moz-range-thumb { transform: scale(1.05); }
 	transform: translateZ(0); /* new layer */
 }
 
+/* Reliable selection outline (avoids Safari ring clipping) */
+.card-selected {
+	position: relative;
+}
+.card-selected:after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	pointer-events: none;
+	box-shadow: 0 0 0 2px #111;
+}
+

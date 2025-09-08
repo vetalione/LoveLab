@@ -453,7 +453,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
       <div
         key={c.id}
         ref={(el)=>{ if(mobile) cardRefs.current[c.id]=el; }}
-  className={`card-blur-border p-4 rounded-2xl border border-neutral-200 bg-white/70 backdrop-blur shadow-sm relative ${mobile? 'flex-shrink-0 w-[88vw] snap-center':'w-full'} ${selectedCategory===c.id? 'ring-1 ring-neutral-800':''}`}
+  className={`card-blur-border p-4 rounded-2xl border border-neutral-200 bg-white/70 backdrop-blur shadow-sm relative ${mobile? 'flex-shrink-0 w-[88vw] snap-center':'w-full'} ${selectedCategory===c.id? 'card-selected':''}`}
       >
         <div className="text-sm font-semibold mb-1">{c.label}</div>
         <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
