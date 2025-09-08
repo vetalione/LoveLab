@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Firestore signaling (lightweight) — optional: will be used for new simplified flow
 import { db, ensureAnonAuth } from './firebase';
-import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, getDoc, deleteDoc, collection, getDocs, where, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, getDoc, deleteDoc, collection, getDocs, where, Timestamp, query } from 'firebase/firestore';
 
 // ====== Utilities ======
 function getWeek(d = new Date()) {
@@ -859,15 +859,13 @@ export function useFirestoreSession(){
       await ensureAnonAuth();
       const ttlMs = 20*60*1000;
       const oldest = new Date(Date.now()-ttlMs);
-      const q = where('createdAt','<', Timestamp.fromDate(oldest));
-      // Firestore requires collection+query building
       const col = collection(db,'p2pSessions');
-      // We may have to fetch all and filter if index missing; fallback silently
       let snaps;
       try {
-        snaps = await getDocs({ withConverter: undefined, type: 'query', _query: { path: col.path, filters:[q] } });
+        const qRef = query(col, where('createdAt','<', Timestamp.fromDate(oldest)));
+        snaps = await getDocs(qRef);
       } catch {
-        // Fallback simple: fetch limited batch and filter client-side
+        // fallback fetch all and filter client side if index not ready
         snaps = await getDocs(col);
       }
       const now = Date.now();
