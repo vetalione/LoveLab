@@ -543,7 +543,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
   );
 }
 
-function Suggestions({ items, onSend, onDelete, activeCategoryId, offlineHelp }) {
+function Suggestions({ items, onSend, onDelete, activeCategoryId }) {
   // items: [{id?, title, desc, weight?, source, packId?, categoryId?}]
   const list = items || [];
   return (
@@ -569,8 +569,7 @@ function Suggestions({ items, onSend, onDelete, activeCategoryId, offlineHelp })
             <div className="text-xs text-neutral-600 whitespace-pre-line">{p.desc}</div>
           </div>
           <button
-            onMouseEnter={() => { if(offlineHelp) offlineHelp(true); }}
-            onClick={() => { if(offlineHelp) offlineHelp(false); onSend(p); }}
+            onClick={() => onSend(p)}
             className="mt-3 inline-flex items-center justify-center text-sm font-semibold rounded-2xl px-4 py-3 bg-neutral-900 text-white active:scale-[0.99] disabled:opacity-40"
           >
             Предложить партнёру
@@ -874,21 +873,12 @@ export default function RelationshipLab() {
 
   // toasts
   const [toasts, setToasts] = useState([]);
+  const [showConnectHint, setShowConnectHint] = useState(false); // highlight instructions inside sync modal when user attempts partner action offline
   function notify(title, opts = {}) {
     const id = uid();
     setToasts((t) => [...t, { id, title, ...opts }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }
-
-  // Helper: show instruction to connect partner (opens sync modal)
-  const lastHelpRef = useRef(0);
-  const showConnectHelp = useCallback((fromHover = false) => {
-    const now = Date.now();
-    if (fromHover && now - lastHelpRef.current < 4000) return; // throttle hover spam
-    lastHelpRef.current = now;
-    notify('Нужно подключить партнёра!', { type: 'warn', msg: '1) Нажмите «Онлайн‑синхронизация». 2) Хост: «Сгенерировать OFFER» и отправьте текст. 3) Партнёр вставляет OFFER, жмёт «Сгенерировать ANSWER» и отправляет вам. 4) Вставьте ANSWER и подтвердите.' });
-    setShowSync(true);
-  }, []);
 
   const avg = useMemo(() => {
     const o = {};
@@ -1024,14 +1014,14 @@ export default function RelationshipLab() {
     setSendingPulse(true);
     await sleep(120);
     setSendingPulse(false);
-    if (sync.status === "connected") {
-      notify("Карточка отправлена", { type: "success" });
+    if (sync.status !== "connected") {
+      notify("Нужно подключить партнера!", { type: "warn", msg: "Откройте окно синхронизации для инструкций." });
+      setShowSync(true); setShowConnectHint(true);
     } else {
-      // Show extended instruction instead of simple offline note
-      showConnectHelp();
+      notify("Карточка отправлена", { type: "success" });
     }
     sync.send({ type: "card", payload });
-  }, [myRole, partnerInbox, setPartnerInbox, sync, showConnectHelp]);
+  }, [myRole, partnerInbox, setPartnerInbox, sync]);
 
   const handleSendSuggestion = useCallback((card) => {
     const withWeight = { ...card, weight: card.weight ?? impact };
@@ -1243,8 +1233,7 @@ export default function RelationshipLab() {
                 >Мои колбы</button>
                 <button
                   type="button"
-                  onMouseEnter={() => { if(sync.status !== 'connected') showConnectHelp(true); }}
-                  onClick={() => { if(sync.status !== 'connected'){ showConnectHelp(); return; } setTubeView('partner'); }}
+                  onClick={() => { if(sync.status!=="connected"){ setShowSync(true); setShowConnectHint(true); notify("Нужно подключить партнера!", { type:'warn', msg:'Следуйте инструкции в открывшемся окне.' }); return; } setTubeView('partner'); }}
                   className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='partner' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
                 >Колбы партнёра</button>
               </div>
@@ -1333,7 +1322,7 @@ export default function RelationshipLab() {
               </div>
             </div>
           )}
-          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} activeCategoryId={categoryForHints} offlineHelp={(hover)=>{ if(sync.status!=='connected') showConnectHelp(hover); }} />
+          <Suggestions items={suggestionsForUI} onSend={handleSendSuggestion} onDelete={handleDeleteSuggestion} activeCategoryId={categoryForHints} />
         </section>
 
         {/* Contribution Stats (moved below cards) */}
@@ -1446,6 +1435,17 @@ export default function RelationshipLab() {
                 Закрыть
               </button>
             </div>
+            {showConnectHint && (
+              <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-snug">
+                <div className="font-semibold mb-1">Нужно подключить партнера!</div>
+                <ol className="list-decimal ml-4 space-y-1">
+                  <li>Один из вас нажимает «Сгенерировать OFFER» и отправляет полученный текст второму.</li>
+                  <li>Партнёр вставляет OFFER в своё поле и жмёт «Сгенерировать ANSWER».</li>
+                  <li>Ответ (ANSWER) отправляется обратно первому, он вставляет его и нажимает «Подтвердить ANSWER».</li>
+                </ol>
+                <div className="mt-2">После статуса <span className="font-medium">connected</span> можно смотреть «Колбы партнёра» и отправлять задания.</div>
+              </div>
+            )}
             <div className="text-xs text-neutral-600 mb-4">
               P2P через WebRTC (ручная сигнализация). 1) Хост генерирует OFFER и делится им. 2) Гость генерирует ANSWER и отправляет хосту. 3) Хост подтверждает ANSWER.
             </div>
@@ -1455,32 +1455,14 @@ export default function RelationshipLab() {
                 <button type="button" onClick={sync.startHost} className="mb-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
                   Сгенерировать OFFER
                 </button>
-                <div className="relative mb-2">
-                  <textarea className="w-full h-28 border rounded-2xl p-2 pr-16 text-xs" value={sync.offerText} readOnly placeholder="Скопируйте OFFER партнёру" onFocus={(e)=>e.target.select()} />
-                  {sync.offerText && (
-                    <button
-                      type="button"
-                      onClick={() => { try { navigator.clipboard.writeText(sync.offerText); notify('Скопировано', { type:'success', msg:'OFFER' }); } catch { try { const ta = document.createElement('textarea'); ta.value = sync.offerText; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); notify('Скопировано', { type:'success', msg:'OFFER' }); } catch {} } }}
-                      className="absolute top-2 right-2 px-2 py-1 rounded-md text-[10px] font-semibold border bg-white hover:bg-neutral-100"
-                    >Copy</button>
-                  )}
-                </div>
+                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs" value={sync.offerText} readOnly placeholder="Скопируйте OFFER партнёру" onFocus={(e)=>e.target.select()} />
                 <div className="mt-2 text-xs text-neutral-600">Вставьте ANSWER от партнёра:</div>
-                <div className="relative">
-                  <textarea
-                    className="w-full h-28 border rounded-2xl p-2 pr-16 text-xs"
-                    placeholder="Вставьте ANSWER"
-                    value={sync.answerText}
-                    onChange={(e) => sync.setAnswerText(e.target.value)}
-                  />
-                  {sync.answerText && (
-                    <button
-                      type="button"
-                      onClick={() => { try { navigator.clipboard.writeText(sync.answerText); notify('Скопировано', { type:'success', msg:'ANSWER (ввод)'}); } catch {} }}
-                      className="absolute top-2 right-2 px-2 py-1 rounded-md text-[10px] font-semibold border bg-white hover:bg-neutral-100"
-                    >Copy</button>
-                  )}
-                </div>
+                <textarea
+                  className="w-full h-28 border rounded-2xl p-2 text-xs"
+                  placeholder="Вставьте ANSWER"
+                  value={sync.answerText}
+                  onChange={(e) => sync.setAnswerText(e.target.value)}
+                />
                 <button type="button" onClick={() => sync.acceptAnswer(sync.answerText)} className="mt-2 px-4 py-2 rounded-2xl text-xs font-semibold border">
                   Подтвердить ANSWER
                 </button>
@@ -1496,16 +1478,7 @@ export default function RelationshipLab() {
                 <button type="button" onClick={() => sync.startJoiner(sync.offerText)} className="mt-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
                   Сгенерировать ANSWER
                 </button>
-                <div className="relative mt-2">
-                  <textarea className="w-full h-28 border rounded-2xl p-2 pr-16 text-xs" value={sync.answerText} readOnly placeholder="Скопируйте ANSWER и отправьте хосту" onFocus={(e)=>e.target.select()} />
-                  {sync.answerText && (
-                    <button
-                      type="button"
-                      onClick={() => { try { navigator.clipboard.writeText(sync.answerText); notify('Скопировано', { type:'success', msg:'ANSWER' }); } catch {} }}
-                      className="absolute top-2 right-2 px-2 py-1 rounded-md text-[10px] font-semibold border bg-white hover:bg-neutral-100"
-                    >Copy</button>
-                  )}
-                </div>
+                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs mt-2" value={sync.answerText} readOnly placeholder="Скопируйте ANSWER и отправьте хосту" onFocus={(e)=>e.target.select()} />
               </div>
             </div>
             <div className="mt-3 text-xs">
