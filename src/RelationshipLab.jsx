@@ -979,7 +979,7 @@ export function useFirestoreSession(){
     dispose();
     try { localStorage.removeItem('labSessCode'); localStorage.removeItem('labSessRole'); } catch {}
   }
-  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose, cancel, cleanupOldSessions, reoffer, pushMirror, docData };
+  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose, cancel, cleanupOldSessions, reoffer, pushMirror, docData, isHost: () => isHostRef.current };
 }
 
 // ====== Random card generator ======
@@ -1055,10 +1055,8 @@ function Toasts({ toasts, onClose }) {
 
 // ====== Main App ======
 export default function RelationshipLab() {
-  // players & balances
-  // Fixed single-user perspective (Игрок A) — переключение экрана/роли удалено
-  const player = 'A';
-  const myRole = 'A';
+  // Роль определяется динамически (host=A, guest=B) вместо жёсткого player='A'
+  const [myRole, setMyRole] = useState('A'); // 'A' | 'B'
   // Which set of tubes we are currently viewing/editing: 'mine' | 'partner'
   const [tubeView, setTubeView] = useState('mine'); // 'avg' added to options
   const [A, setA] = useState({ ...defaultScale });
@@ -1125,9 +1123,9 @@ export default function RelationshipLab() {
     return o;
   }, [A, B]);
 
-  const me = player === "A" ? A : B;
-  const setMe = player === "A" ? setA : setB;
-  const partner = player === "A" ? B : A;
+  const me = myRole === "A" ? A : B;
+  const setMe = myRole === "A" ? setA : setB;
+  const partner = myRole === "A" ? B : A;
   // Derived tubes based on tubeView toggle
   const avgObject = useMemo(() => {
     const o = {}; for(const c of CATEGORIES) o[c.id] = Math.round((A[c.id] + B[c.id]) / 2); return o;
@@ -1135,10 +1133,10 @@ export default function RelationshipLab() {
   const tubesModel = tubeView === 'mine' ? me : (tubeView === 'partner' ? partner : avgObject); // partner & avg read-only
   const setTubesModel = tubeView === 'mine' ? setMe : (()=>{});
   const tubesPartner = tubeView === 'mine' ? partner : me; // for displaying partner overlay when viewing own tubes, and vice versa
-  const myInbox = player === "A" ? inboxA : inboxB;
-  const setMyInbox = player === "A" ? setInboxA : setInboxB;
-  const partnerInbox = player === "A" ? inboxB : inboxA;
-  const setPartnerInbox = player === "A" ? setInboxB : setInboxA;
+  const myInbox = myRole === "A" ? inboxA : inboxB;
+  const setMyInbox = myRole === "A" ? setInboxA : setInboxB;
+  const partnerInbox = myRole === "A" ? inboxB : inboxA;
+  const setPartnerInbox = myRole === "A" ? setInboxB : setInboxA;
 
   const canEdit = true; // lock feature removed – always editable
 
@@ -1471,6 +1469,16 @@ export default function RelationshipLab() {
   const [showSync, setShowSync] = useState(false);
   // Firestore simplified signaling session hook
   const fireSess = useFirestoreSession();
+  // Определяем роль на основе состояния Firestore session / localStorage
+  useEffect(()=>{
+    try {
+      const saved = localStorage.getItem('labSessRole');
+      if(saved === 'guest') setMyRole('B');
+      if(saved === 'host') setMyRole('A');
+    } catch {}
+    if (fireSess.phase === 'answering') setMyRole('B');
+    if (fireSess.phase === 'creating' || fireSess.phase === 'waiting') setMyRole('A');
+  }, [fireSess.phase]);
   const resumeTriedRef = useRef(false);
   // Возможность просматривать партнёра даже если канал упал, но Firestore показал подключение (snapshot сохранён)
   const canViewPartner = (sync.status === 'connected') || (fireSess?.phase === 'connected');
