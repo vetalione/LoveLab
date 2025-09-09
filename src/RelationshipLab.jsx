@@ -1168,7 +1168,7 @@ export default function RelationshipLab() {
         if (Array.isArray(s.inboxA)) setInboxA(s.inboxA);
         if (Array.isArray(s.inboxB)) setInboxB(s.inboxB);
         setHistory(s.history || []);
-        setGen(s.gen || []);
+  // gen не синхронизируем чтобы не показывать черновики идей партнёра
         setTimeout(() => (applyingRemoteRef.current = false), 50);
       } else if (msg.type === "card") {
   try { console.debug('[P2P][in] card', msg.payload?.title); } catch {}
@@ -1203,7 +1203,8 @@ export default function RelationshipLab() {
   const lastSentRef = useRef("");
   useEffect(() => {
     if (applyingRemoteRef.current) return;
-  const payload = { B: A, inboxA, inboxB, history, gen, nick: myNick || undefined }; // добавили nick для надёжной доставки
+  // Не пересылаем gen (мои идеи) чтобы они не появлялись в списке предложений партнёра.
+  const payload = { B: A, inboxA, inboxB, history, nick: myNick || undefined };
     const json = JSON.stringify(payload);
     if (json === lastSentRef.current) return; // unchanged
     const t = setTimeout(() => {
@@ -1223,7 +1224,7 @@ export default function RelationshipLab() {
       // If partner already sent theirs earlier in race, keep it; else wait for handler
       // отправим сразу актуальное состояние после установления канала
       try {
-  const initPayload = { B: A, inboxA, inboxB, history, gen, nick: myNick || undefined };
+  const initPayload = { B: A, inboxA, inboxB, history, nick: myNick || undefined };
         try { console.debug('[P2P][out] init-state', { sample: initPayload.B }); } catch {}
         sync.send({ type:'state', payload: initPayload });
       } catch {}
