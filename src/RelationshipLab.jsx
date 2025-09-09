@@ -1161,8 +1161,7 @@ export default function RelationshipLab() {
       }
     } catch {}
   });
-  // Возможность просматривать партнёра даже если канал упал, но Firestore показал подключение (snapshot сохранён)
-  const canViewPartner = (sync.status === 'connected') || (fireSess?.phase === 'connected');
+  // canViewPartner moved below fireSess declaration to avoid TDZ ReferenceError
 
   // ====== Debounced P2P state sync (skip if unchanged) ======
   const lastSentRef = useRef("");
@@ -1432,6 +1431,8 @@ export default function RelationshipLab() {
   const [showSync, setShowSync] = useState(false);
   // Firestore simplified signaling session hook
   const fireSess = useFirestoreSession();
+  // Возможность просматривать партнёра даже если канал упал, но Firestore показал подключение (snapshot сохранён)
+  const canViewPartner = (sync.status === 'connected') || (fireSess?.phase === 'connected');
   const [fsError,setFsError]=useState('');
   const [regenerating,setRegenerating]=useState(false);
   const [inviteUrl,setInviteUrl]=useState('');
