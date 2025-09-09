@@ -665,25 +665,39 @@ function useManualP2P(onMessage) {
     pcRef.current = pc;
     pc.oniceconnectionstatechange = () => {
       const st = pc.iceConnectionState;
-      if (st === 'failed' || st === 'disconnected') {
-        attemptReconnect();
+      if (st === 'failed') {
+        attemptReconnect('ice-failed');
+      } else if (st === 'disconnected') {
+        // Grace period to avoid flicker during normal renegotiation
+        setTimeout(()=>{ if(pc.iceConnectionState==='disconnected' && pc.connectionState!=='connected') attemptReconnect('ice-disconnected'); }, 1200);
       } else if (st === 'connected') {
-        setStatus('connected');
+        if (dcRef.current?.readyState === 'open') setStatus('connected');
         if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+      } else if (st === 'checking') {
+        setStatus('connecting');
       } else {
         setStatus(st);
+      }
+    };
+    pc.onconnectionstatechange = () => {
+      const cs = pc.connectionState;
+      if (cs === 'connected') {
+        if (dcRef.current?.readyState === 'open') setStatus('connected');
+      } else if (cs === 'failed') {
+        attemptReconnect('pc-failed');
       }
     };
     pc.ondatachannel = (ev) => {
       dcRef.current = ev.channel;
       dcRef.current.onmessage = (e) => onMessage?.(e.data);
-      setStatus("connected");
+      dcRef.current.onopen = () => { setStatus('connected'); };
+      dcRef.current.onclose = () => { attemptReconnect('dc-close'); };
     };
     setError("");
     return pc;
   }
 
-  function attemptReconnect() {
+  function attemptReconnect(reason) {
     if (!pcRef.current) return;
     if (reconnectTimerRef.current) return; // already trying
     setStatus('reconnecting');
@@ -703,6 +717,8 @@ function useManualP2P(onMessage) {
       const dc = pc.createDataChannel("lab");
       dcRef.current = dc;
     dc.onmessage = (e) => handleChannelMessage(e.data);
+    dc.onopen = () => { setStatus('connected'); };
+    dc.onclose = () => { attemptReconnect('dc-close'); };
       setStatus("connecting");
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -810,8 +826,8 @@ function useManualP2P(onMessage) {
         if (!dc || dc.readyState !== 'open') return;
         // send ping
         try { dc.send(JSON.stringify({ __sys: 'ping' })); } catch {}
-        if (Date.now() - heartbeatRef.current.last > 20000) {
-          attemptReconnect();
+        if (Date.now() - heartbeatRef.current.last > 30000) {
+          attemptReconnect('heartbeat-timeout');
         }
       }, 8000);
       return () => clearInterval(int);
