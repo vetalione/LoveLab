@@ -1452,31 +1452,32 @@ export default function RelationshipLab() {
   // ====== Derived Statistics (overall + per category) ======
   // history entries: { id, week, categoryId, delta, from }
   const { overallStats, categoryStats } = useMemo(() => {
+    // Приводим исходные метки from ('A'/'B') к перспективе пользователя: локальный всегда 'A', партнёр всегда 'B'.
+    const mapFrom = (orig) => (orig === myRole ? 'A' : (orig === 'A' || orig === 'B' ? 'B' : null));
     const emptyPair = () => ({ A:{ sent:0, accepted:0, totalWeight:0 }, B:{ sent:0, accepted:0, totalWeight:0 } });
     const overall = emptyPair();
     const perCat = Object.fromEntries(CATEGORIES.map(c => [c.id, emptyPair()]));
-    // Pending (inboxes) contribute to 'sent' only
+    // Pending (inboxes) count only as sent
     function addPending(arr){
       arr.forEach(c => {
         if(!c || !c.from) return;
-        const bucketOverall = overall[c.from];
-        bucketOverall.sent++;
-        if (c.categoryId && perCat[c.categoryId]) {
-          perCat[c.categoryId][c.from].sent++;
-        }
+        const mapped = mapFrom(c.from);
+        if(!mapped) return;
+        overall[mapped].sent++;
+        if (c.categoryId && perCat[c.categoryId]) perCat[c.categoryId][mapped].sent++;
       });
     }
     addPending(inboxA); addPending(inboxB);
     // Accepted history contributes to sent + accepted + weight
     history.forEach(h => {
-      const from = h.from; if(!from) return;
+      const from = mapFrom(h.from); if(!from) return;
       overall[from].sent++; overall[from].accepted++; overall[from].totalWeight += h.delta || 0;
       if (h.categoryId && perCat[h.categoryId]) {
         perCat[h.categoryId][from].sent++; perCat[h.categoryId][from].accepted++; perCat[h.categoryId][from].totalWeight += h.delta || 0;
       }
     });
     return { overallStats: overall, categoryStats: perCat };
-  }, [inboxA, inboxB, history]);
+  }, [inboxA, inboxB, history, myRole]);
 
   // Current filter: '_all' for overall, else category id
   const [statsFilter, setStatsFilter] = useState('_all');
