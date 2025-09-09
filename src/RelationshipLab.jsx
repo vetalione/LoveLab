@@ -1622,7 +1622,7 @@ export default function RelationshipLab() {
         <section className="mb-8" id="base">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
             <div className="flex items-center gap-4 flex-wrap">
-              <h2 className="text-base sm:text-lg font-semibold">Текущий баланс: {tubeView==='partner' && <span className="font-normal text-neutral-500">(просмотр партнёра)</span>}</h2>
+              <h2 className="text-base sm:text-lg font-semibold">Текущий баланс:</h2>
               <div className="flex bg-white/80 rounded-2xl p-1 border">
                 <button
                   type="button"
