@@ -4,7 +4,9 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+  "dev": "vite",
+  "dev:reset": "lsof -tiTCP:5173 | xargs -I{} kill -9 {} 2>/dev/null || true; vite",
+  "dev:alt": "vite --port=5180",
     "build": "vite build",
     "preview": "vite preview"
   },
