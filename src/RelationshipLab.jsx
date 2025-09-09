@@ -1053,6 +1053,25 @@ export default function RelationshipLab() {
   const [gen, setGen] = useState([]); // [{id,title,desc,weight,categoryId}]
   const [remainingAI, setRemainingAI] = useState(null); // {trust: n,...}
 
+  // Nicknames (двухсловные идентификаторы для отображения имени партнёра вместо статуса)
+  const [myNick, setMyNick] = useState('');
+  const [partnerNick, setPartnerNick] = useState('');
+  const sentNickRef = useRef(false);
+  // Generate or load persistent nickname
+  useEffect(()=>{
+    try {
+      let existing = localStorage.getItem('labNick');
+      if(!existing){
+        // reuse WORDS_A / WORDS_B
+        const color = WORDS_A[Math.floor(Math.random()*WORDS_A.length)];
+        const animal = WORDS_B[Math.floor(Math.random()*WORDS_B.length)];
+        existing = `${color} ${animal}`;
+        localStorage.setItem('labNick', existing);
+      }
+      setMyNick(existing);
+    } catch { /* ignore */ }
+  },[]);
+
   // toasts
   const [toasts, setToasts] = useState([]);
   const [showConnectHint, setShowConnectHint] = useState(false); // highlight instructions inside sync modal when user attempts partner action offline
@@ -1125,6 +1144,8 @@ export default function RelationshipLab() {
         setInboxA((l) => l.filter((x) => x.id !== id));
         setInboxB((l) => l.filter((x) => x.id !== id));
         notify("Карточка отклонена", { type: "warn" });
+      } else if (msg.type === 'nick') {
+        if (typeof msg.payload === 'string' && !partnerNick) setPartnerNick(msg.payload);
       }
     } catch {}
   });
@@ -1142,6 +1163,18 @@ export default function RelationshipLab() {
     }, 150); // debounce
     return () => clearTimeout(t);
   }, [A, B, inboxA, inboxB, history, gen]);
+
+  // Send nickname once connected
+  useEffect(()=>{
+    if(sync.status === 'connected' && myNick && !sentNickRef.current){
+      sentNickRef.current = true;
+      sync.send({ type:'nick', payload: myNick });
+      // If partner already sent theirs earlier in race, keep it; else wait for handler
+    }
+    if(sync.status !== 'connected'){
+      sentNickRef.current = false; // allow resend after reconnection
+    }
+  },[sync.status, myNick]);
 
   // ====== Persist to localStorage ======
   // ====== Local persistence with version & debounce ======
@@ -1447,8 +1480,8 @@ export default function RelationshipLab() {
             <button onClick={() => setShowSync(true)} className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">
               Пригласить партнера
             </button>
-            <span className={`text-xs px-2 py-1 rounded-full border ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`}>
-              {sync.status}
+            <span className={`text-xs px-2 py-1 rounded-full border ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`} title={sync.status === 'connected' ? (partnerNick || 'ожидание ника партнёра…') : 'Статус соединения'}>
+              {sync.status === 'connected' ? (partnerNick || '...') : sync.status}
             </span>
           </div>
         </header>
