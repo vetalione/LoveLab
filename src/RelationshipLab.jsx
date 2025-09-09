@@ -1172,7 +1172,7 @@ export default function RelationshipLab() {
         if (Array.isArray(s.inboxB)) setInboxB(s.inboxB);
         setHistory(s.history || []);
         setTimeout(() => (applyingRemoteRef.current = false), 50);
-      } else if (msg.type === "card") {
+  } else if (msg.type === "card") {
   try { console.debug('[P2P][in] card', msg.payload?.title); } catch {}
         const item = msg.payload || {};
         const roleNow = myRoleRef?.current || 'A';
@@ -1201,24 +1201,26 @@ export default function RelationshipLab() {
             } else {
               try { console.warn('[CARD][in] unknown target', item.to); } catch {}
             }
-            notify("Получена карточка", { msg: item.title });
+      const nickSender = partnerNick || (item.from === myRoleRef.current ? myNick : partnerNick) || 'партнёр';
+      notify("Получена карточка", { msg: nickSender + ': ' + item.title });
           }
         }
       } else if (msg.type === "accept") {
   try { console.debug('[P2P][in] accept', msg.payload?.id); } catch {}
-        const { id, categoryId, weight } = msg.payload;
+    const { id, categoryId, weight, from: payloadFrom } = msg.payload || {};
         setA((s) => applyImpact(s, categoryId, weight));
         setB((s) => applyImpact(s, categoryId, weight));
         setInboxA((l) => l.filter((x) => x.id !== id));
         setInboxB((l) => l.filter((x) => x.id !== id));
-        setHistory((h) => [...h, { id: uid(), week: getWeek(), categoryId, delta: weight, from: msg.from }]);
-        notify("Партнёр принял карточку", { type: "success" });
+    const srcRole = payloadFrom || msg.from || (myRoleRef.current === 'A' ? 'B' : 'A');
+    setHistory((h) => [...h, { id: uid(), week: getWeek(), categoryId, delta: weight, from: srcRole, fromNick: partnerNick || 'партнёр' }]);
+    notify("Принятие", { type: "success", msg: (partnerNick||'Партнёр') + ' принял карточку' });
       } else if (msg.type === "decline") {
   try { console.debug('[P2P][in] decline', msg.payload?.id); } catch {}
         const { id } = msg.payload;
         setInboxA((l) => l.filter((x) => x.id !== id));
         setInboxB((l) => l.filter((x) => x.id !== id));
-        notify("Карточка отклонена", { type: "warn" });
+    notify("Отклонена", { type: "warn", msg: (partnerNick||'Партнёр') + ' отклонил карточку' });
       } else if (msg.type === 'nick') {
   try { console.debug('[P2P][in] nick', msg.payload); } catch {}
         if (typeof msg.payload === 'string' && !partnerNick) setPartnerNick(msg.payload);
@@ -1322,7 +1324,7 @@ export default function RelationshipLab() {
       notify("Нужно подключить партнера!", { type: "warn", msg: "Откройте окно синхронизации для инструкций." });
       setShowSync(true); setShowConnectHint(true);
     } else {
-      notify("Карточка отправлена", { type: "success" });
+      notify("Отправлено", { type: "success", msg: (myNick||'Вы') + ' → ' + (partnerNick||'Партнёр') });
     }
     sync.send({ type: "card", payload });
   }, [partnerInbox, setPartnerInbox, sync]);
@@ -1338,8 +1340,8 @@ export default function RelationshipLab() {
     setA((s) => applyImpact(s, categoryId, w));
     setB((s) => applyImpact(s, categoryId, w));
     setMyInbox((lst) => lst.filter((x) => x.id !== item.id));
-    setHistory((h) => [...h, { id: uid(), week: getWeek(), categoryId, delta: w, from: myRole }]);
-    sync.send({ type: "accept", payload: { id: item.id, categoryId, weight: w, from: myRole } });
+  setHistory((h) => [...h, { id: uid(), week: getWeek(), categoryId, delta: w, from: myRole, fromNick: myNick || 'я' }]);
+  sync.send({ type: "accept", payload: { id: item.id, categoryId, weight: w, from: myRole, fromNick: myNick || undefined } });
   }, [impact, myRole, applyImpact, setMyInbox]);
 
   const declineCard = useCallback((item) => {
