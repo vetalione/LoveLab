@@ -1678,7 +1678,7 @@ export default function RelationshipLab() {
       {showSync && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-3 sm:p-4 z-50">
           <div className="w-full max-w-sm sm:max-w-md bg-white rounded-2xl p-4 sm:p-5 shadow-xl max-h-[90vh] overflow-y-auto overscroll-contain relative">
-            <div className="sticky top-0 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 bg-white rounded-t-2xl flex items-center justify-between z-10 border-b">
+            <div className="sticky top-0 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 sm:pt-5 pb-3 bg-white rounded-t-2xl flex items-center justify-between z-10 border-b">
               <div className="text-base sm:text-lg font-semibold">Пригласить партнера</div>
               <button onClick={() => setShowSync(false)} className="text-xs sm:text-sm px-3 py-2 rounded-2xl border">Закрыть</button>
             </div>
