@@ -667,14 +667,14 @@ function useManualP2P(onMessage) {
       const st = pc.iceConnectionState;
       if (st === 'failed') {
         attemptReconnect('ice-failed');
-      } else if (st === 'disconnected') {
-        // Grace period to avoid flicker during normal renegotiation
-        setTimeout(()=>{ if(pc.iceConnectionState==='disconnected' && pc.connectionState!=='connected') attemptReconnect('ice-disconnected'); }, 1200);
       } else if (st === 'connected') {
         if (dcRef.current?.readyState === 'open') setStatus('connected');
         if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
       } else if (st === 'checking') {
         setStatus('connecting');
+      } else if (st === 'disconnected') {
+        // wait for heartbeat before declaring reconnect (avoid flapping)
+        /* passive wait */
       } else {
         setStatus(st);
       }
@@ -826,7 +826,7 @@ function useManualP2P(onMessage) {
         if (!dc || dc.readyState !== 'open') return;
         // send ping
         try { dc.send(JSON.stringify({ __sys: 'ping' })); } catch {}
-        if (Date.now() - heartbeatRef.current.last > 30000) {
+        if (Date.now() - heartbeatRef.current.last > 35000) {
           attemptReconnect('heartbeat-timeout');
         }
       }, 8000);
@@ -917,11 +917,8 @@ export function useFirestoreSession(){
         const d=snap.data();
         if (d?.answer && phase!=='connected') {
           setRemoteAnswer(d.answer); setPhase('connected');
-          // host: delete doc after we received answer (ephemeral)
-          if(isHostRef.current && docRefRef.current){
-            const delRef = docRefRef.current; docRefRef.current=null;
-            setTimeout(()=>{ deleteDoc(delRef).catch(()=>{}); }, 4000);
-          }
+          // (отключено) раньше мы удаляли документ сразу после подключения, что вызывало "Сессия не найдена" при повторных обращениях
+          // оставляем документ до TTL очистки
         }
       });
       return code;
@@ -945,8 +942,7 @@ export function useFirestoreSession(){
   async function submitAnswer(code, answerSDP){
   if(!answerSDP || answerSDP.length < 50) throw new Error('Пустой/короткий answer');
   const ref = doc(db,'p2pSessions', code); await updateDoc(ref,{ answer:answerSDP, status:'answered' });
-    // guest schedules cleanup (in case host cannot delete) after short delay
-    setTimeout(()=>{ if(!isHostRef.current && docRefRef.current){ deleteDoc(docRefRef.current).catch(()=>{}); docRefRef.current=null; } }, 1000*60*5); // fallback delete after 5m
+  // (отключено удаление) пусть документ живёт до TTL
   }
   function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); setRemoteAnswer(''); isHostRef.current=false; docRefRef.current=null; }
   async function cancel(){
