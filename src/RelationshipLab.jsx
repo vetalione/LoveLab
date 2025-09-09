@@ -1888,7 +1888,11 @@ export default function RelationshipLab() {
             {fireSess.phase==='error' && (
               <div className="space-y-3">
                 <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">Ошибка: {fsError || 'Не удалось создать сессию'}</div>
-                <button disabled={regenerating} onClick={hostRegenerateLink} className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40">{regenerating? 'Повтор...' : 'Попробовать снова'}</button>
+                <button
+                  disabled={regenerating}
+                  onClick={()=>{ fireSess.dispose(); setFsError(''); /* возвращаемся к idle */ }}
+                  className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40"
+                >{regenerating? '...' : 'Попробовать снова'}</button>
               </div>
             )}
             {fireSess.phase==='answering' && (
