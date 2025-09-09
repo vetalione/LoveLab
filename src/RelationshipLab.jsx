@@ -1569,8 +1569,7 @@ export default function RelationshipLab() {
     // host mirrors as stateA, guest as stateB
     const payload = { A }; // local perspective always A for now
     const toPush = role === 'host' ? { stateA: A, nickA: myNick || undefined } : { stateB: A, nickB: myNick || undefined };
-    const json = JSON.stringify(toPush);
-    const mirrorRef = role === 'host' ? useRef(null) : useRef(null); // dummy to satisfy lint (scoped effect)
+  // (Removed erroneous useRef here; was causing invalid hook call in production bundle)
     const t = setTimeout(()=>{ fireSess.pushMirror?.(toPush); }, 800); // debounce sync
     return () => clearTimeout(t);
   }, [A, fireSess.code, myNick]);
