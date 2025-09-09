@@ -1129,6 +1129,7 @@ export default function RelationshipLab() {
     try {
       const msg = JSON.parse(raw);
       if (msg.type === "state") {
+  try { console.debug('[P2P][in] state', { fromNick: partnerNick || 'remote', keys: Object.keys(msg.payload||{}), sample: msg.payload?.B }); } catch {}
         // Новая семантика: не перезаписываем свои A значениями партнёра.
         applyingRemoteRef.current = true;
         const s = msg.payload || {};
@@ -1139,11 +1140,13 @@ export default function RelationshipLab() {
         setGen(s.gen || []);
         setTimeout(() => (applyingRemoteRef.current = false), 50);
       } else if (msg.type === "card") {
+  try { console.debug('[P2P][in] card', msg.payload?.title); } catch {}
         const item = msg.payload;
         if (item.to === "A") setInboxA((l) => [item, ...l]);
         else setInboxB((l) => [item, ...l]);
         notify("Получена карточка", { msg: item.title });
       } else if (msg.type === "accept") {
+  try { console.debug('[P2P][in] accept', msg.payload?.id); } catch {}
         const { id, categoryId, weight } = msg.payload;
         setA((s) => applyImpact(s, categoryId, weight));
         setB((s) => applyImpact(s, categoryId, weight));
@@ -1152,11 +1155,13 @@ export default function RelationshipLab() {
         setHistory((h) => [...h, { id: uid(), week: getWeek(), categoryId, delta: weight, from: msg.from }]);
         notify("Партнёр принял карточку", { type: "success" });
       } else if (msg.type === "decline") {
+  try { console.debug('[P2P][in] decline', msg.payload?.id); } catch {}
         const { id } = msg.payload;
         setInboxA((l) => l.filter((x) => x.id !== id));
         setInboxB((l) => l.filter((x) => x.id !== id));
         notify("Карточка отклонена", { type: "warn" });
       } else if (msg.type === 'nick') {
+  try { console.debug('[P2P][in] nick', msg.payload); } catch {}
         if (typeof msg.payload === 'string' && !partnerNick) setPartnerNick(msg.payload);
       }
     } catch {}
@@ -1172,6 +1177,7 @@ export default function RelationshipLab() {
     if (json === lastSentRef.current) return; // unchanged
     const t = setTimeout(() => {
       lastSentRef.current = json;
+  try { console.debug('[P2P][out] state', { mineChanged: true, sample: payload.B }); } catch {}
       sync.send({ type: "state", payload });
     }, 150); // debounce
     return () => clearTimeout(t);
@@ -1181,11 +1187,13 @@ export default function RelationshipLab() {
   useEffect(()=>{
     if(sync.status === 'connected' && myNick && !sentNickRef.current){
       sentNickRef.current = true;
+      try { console.debug('[P2P][out] nick', myNick); } catch {}
       sync.send({ type:'nick', payload: myNick });
       // If partner already sent theirs earlier in race, keep it; else wait for handler
       // отправим сразу актуальное состояние после установления канала
       try {
         const initPayload = { B: A, inboxA, inboxB, history, gen };
+        try { console.debug('[P2P][out] init-state', { sample: initPayload.B }); } catch {}
         sync.send({ type:'state', payload: initPayload });
       } catch {}
     }
