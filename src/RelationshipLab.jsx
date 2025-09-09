@@ -1133,6 +1133,11 @@ export default function RelationshipLab() {
         // Новая семантика: не перезаписываем свои A значениями партнёра.
         applyingRemoteRef.current = true;
         const s = msg.payload || {};
+        // Подхватываем ник, если он пришёл внутри state (redundant channel для надёжности)
+        if (s.nick && !partnerNick && typeof s.nick === 'string') {
+          try { console.debug('[P2P][in] state.nick', s.nick); } catch {}
+          setPartnerNick(s.nick);
+        }
         if (s.B && typeof s.B === 'object') setB(s.B);
         if (Array.isArray(s.inboxA)) setInboxA(s.inboxA);
         if (Array.isArray(s.inboxB)) setInboxB(s.inboxB);
@@ -1172,7 +1177,7 @@ export default function RelationshipLab() {
   const lastSentRef = useRef("");
   useEffect(() => {
     if (applyingRemoteRef.current) return;
-  const payload = { B: A, inboxA, inboxB, history, gen }; // отправляем только свой state как B-снимок
+  const payload = { B: A, inboxA, inboxB, history, gen, nick: myNick || undefined }; // добавили nick для надёжной доставки
     const json = JSON.stringify(payload);
     if (json === lastSentRef.current) return; // unchanged
     const t = setTimeout(() => {
@@ -1181,7 +1186,7 @@ export default function RelationshipLab() {
       sync.send({ type: "state", payload });
     }, 150); // debounce
     return () => clearTimeout(t);
-  }, [A, B, inboxA, inboxB, history, gen]);
+  }, [A, B, inboxA, inboxB, history, gen, myNick]);
 
   // Send nickname once connected
   useEffect(()=>{
@@ -1192,7 +1197,7 @@ export default function RelationshipLab() {
       // If partner already sent theirs earlier in race, keep it; else wait for handler
       // отправим сразу актуальное состояние после установления канала
       try {
-        const initPayload = { B: A, inboxA, inboxB, history, gen };
+  const initPayload = { B: A, inboxA, inboxB, history, gen, nick: myNick || undefined };
         try { console.debug('[P2P][out] init-state', { sample: initPayload.B }); } catch {}
         sync.send({ type:'state', payload: initPayload });
       } catch {}
