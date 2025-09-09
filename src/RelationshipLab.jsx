@@ -462,7 +462,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
         <div className="relative z-10">
           <div className="text-sm font-semibold mb-1">{c.label}</div>
           <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
-        <input
+  <input name="quick-filter"
           type="range"
           min={0}
           max={100}
@@ -530,7 +530,7 @@ function SliderRow({ model, onChange, onSelectCategory, disabled, selectedCatego
               <div className="mb-4">
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-neutral-400">1</span>
-                  <input type="range" min={1} max={10} value={val} onChange={(e)=>answer(Number(e.target.value))} className="flex-1 h-2" style={{ accentColor: col, background: `linear-gradient(90deg, ${lighten(col,35)} 0%, ${col} 100%)`, borderRadius: '9999px' }} />
+                  <input name="quiz-range" type="range" min={1} max={10} value={val} onChange={(e)=>answer(Number(e.target.value))} className="flex-1 h-2" style={{ accentColor: col, background: `linear-gradient(90deg, ${lighten(col,35)} 0%, ${col} 100%)`, borderRadius: '9999px' }} />
                   <span className="text-[10px] text-neutral-400">10</span>
                 </div>
                 <div className="mt-2 text-center text-[11px] font-medium" style={{ color: darken(col||'#888',20) }}>Текущее значение: {val}</div>
@@ -600,8 +600,8 @@ function Suggestions({ items, onSend, onDelete, activeCategoryId, onAddManual, o
         {stage==='manual' && (
           <div className="flex-1 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs text-neutral-500"><span>Вес</span><span className="font-semibold">+{wChoice}</span></div>
-            <input value={mtitle} onChange={e=>setMtitle(e.target.value)} placeholder="Заголовок" className="border rounded-xl px-2 py-1.5 text-xs" />
-            <textarea value={mdesc} onChange={e=>setMdesc(e.target.value)} placeholder="Описание" className="border rounded-xl px-2 py-1.5 text-[11px] resize-none h-20" />
+            <input name="manual-title" value={mtitle} onChange={e=>setMtitle(e.target.value)} placeholder="Заголовок" className="border rounded-xl px-2 py-1.5 text-xs" />
+            <textarea name="manual-desc" value={mdesc} onChange={e=>setMdesc(e.target.value)} placeholder="Описание" className="border rounded-xl px-2 py-1.5 text-[11px] resize-none h-20" />
             <div className="mt-auto flex gap-2 pt-1">
               <button disabled={!mtitle.trim()} onClick={()=>{ if(!mtitle.trim()) return; onAddManual?.(wChoice, mtitle.trim(), mdesc.trim()); reset(); }} className="flex-1 px-3 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white disabled:opacity-40">Добавить</button>
               <button type="button" onClick={()=>setStage('mode')} className="px-3 py-2 rounded-2xl text-xs font-semibold border bg-white">Назад</button>
@@ -707,10 +707,13 @@ function useManualP2P(onMessage) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       await waitForICE(pc);
-      setOfferText(JSON.stringify(pc.localDescription));
+  const sdpStr = JSON.stringify(pc.localDescription);
+  setOfferText(sdpStr);
+  return sdpStr; // IMPORTANT: return offer so callers don't race React state
     } catch (e) {
       setError(String(e?.message || e));
       setStatus("error");
+  throw e;
     }
   }
 
@@ -887,7 +890,8 @@ export function useFirestoreSession(){
       setPhase('creating');
       const {code,ref}=await generateCode();
       docRefRef.current = ref;
-      await setDoc(ref,{ offer:offerSDP, createdAt:serverTimestamp(), status:'waiting' });
+  if(!offerSDP || offerSDP.length < 50) throw new Error('Пустой offer — повторите ещё раз');
+  await setDoc(ref,{ offer:offerSDP, createdAt:serverTimestamp(), status:'waiting' });
       setCode(code); setPhase('waiting');
       unsubRef.current = onSnapshot(ref,(snap)=>{
         const d=snap.data();
@@ -1369,8 +1373,8 @@ export default function RelationshipLab() {
     try {
       setFsError('');
       // create WebRTC offer first (reuse existing startHost logic partially without UI textareas)
-      await sync.startHost();
-      const code = await fireSess.create(sync.offerText);
+  const offer = await sync.startHost(); // get fresh SDP directly
+  const code = await fireSess.create(offer);
       const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
       let copied=false;
       try { await navigator.clipboard.writeText(url); copied=true; } catch {}
@@ -1627,8 +1631,8 @@ export default function RelationshipLab() {
             {mobileStage==='manual' && (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between text-xs text-neutral-500"><span>Вес</span><span className="font-semibold">+{mobileWeight}</span></div>
-                <input value={mobileTitle} onChange={e=>setMobileTitle(e.target.value)} placeholder="Заголовок" className="border rounded-xl px-3 py-2 text-sm" />
-                <textarea value={mobileDesc} onChange={e=>setMobileDesc(e.target.value)} placeholder="Описание" className="border rounded-xl px-3 py-2 text-xs resize-none h-24" />
+                <input name="mobile-title" value={mobileTitle} onChange={e=>setMobileTitle(e.target.value)} placeholder="Заголовок" className="border rounded-xl px-3 py-2 text-sm" />
+                <textarea name="mobile-desc" value={mobileDesc} onChange={e=>setMobileDesc(e.target.value)} placeholder="Описание" className="border rounded-xl px-3 py-2 text-xs resize-none h-24" />
                 <div className="flex gap-2">
                   <button disabled={!mobileTitle.trim()} onClick={()=>{ if(!mobileTitle.trim()) return; const card = { id: uid(), title: mobileTitle.trim(), desc: mobileDesc.trim(), weight: mobileWeight, categoryId: categoryForHints, source:'manual' }; setManual(m=>[card,...m]); notify('Добавлена карточка',{ type:'success', msg: card.title }); resetMobile(); }} className="flex-1 px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40">Добавить</button>
                   <button type="button" onClick={()=>setMobileStage('mode')} className="px-4 py-2 rounded-2xl text-sm font-semibold border bg-white">Назад</button>
@@ -1719,7 +1723,7 @@ function JoinByCodeForm({ onJoin, loading }) {
   const [v,setV]=useState('');
   return (
     <form onSubmit={(e)=>{ e.preventDefault(); if(!v.trim()) return; onJoin(v); }} className="flex gap-2">
-      <input value={v} onChange={e=>setV(e.target.value)} placeholder="код партнёра" className="flex-1 border rounded-2xl px-3 py-2 text-xs" />
+  <input name="join-code" value={v} onChange={e=>setV(e.target.value)} placeholder="код партнёра" className="flex-1 border rounded-2xl px-3 py-2 text-xs" />
       <button disabled={!v.trim()||loading} className="px-4 py-2 rounded-2xl text-xs font-semibold bg-white border disabled:opacity-40">Войти</button>
     </form>
   );
