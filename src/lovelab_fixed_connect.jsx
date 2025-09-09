@@ -97,6 +97,8 @@ function SliderRow({ model, onChange }) {
             <div className="text-sm font-semibold mb-1">{c.label}</div>
             <div className="text-xs text-neutral-500 mb-2">{c.tip}</div>
             <input
+              name={`scale-${c.id}`}
+              id={`scale-${c.id}`}
               type="range"
               min={0}
               max={100}
@@ -815,12 +817,16 @@ export default function RelationshipLab() {
             <div className="text-sm font-semibold mb-2">Создать пак</div>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
+                name="pack-name"
+                id="pack-name"
                 className="flex-1 border rounded-2xl px-4 py-3 text-sm"
                 placeholder="Название пака"
                 value={packForm.name}
                 onChange={(e) => setPackForm({ ...packForm, name: e.target.value })}
               />
               <select
+                name="pack-category"
+                id="pack-category"
                 className="border rounded-2xl px-4 py-3 text-sm"
                 value={packForm.categoryId}
                 onChange={(e) => setPackForm({ ...packForm, categoryId: e.target.value })}
@@ -847,7 +853,7 @@ export default function RelationshipLab() {
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-xs flex items-center gap-1">
-                      <input type="checkbox" className="w-5 h-5" checked={p.active} onChange={() => togglePackActive(p.id)} /> активен
+                      <input name={`pack-active-${p.id}`} id={`pack-active-${p.id}`} type="checkbox" className="w-5 h-5" checked={p.active} onChange={() => togglePackActive(p.id)} /> активен
                     </label>
                     <button
                       onClick={() => setSelectedPackId(p.id)}
@@ -880,18 +886,24 @@ export default function RelationshipLab() {
                 {selectedPackId === p.id && (
                   <div className="mt-3 flex flex-col sm:flex-row gap-2">
                     <input
+                      name="card-title"
+                      id="card-title"
                       className="flex-1 border rounded-2xl px-4 py-3 text-sm"
                       placeholder="Заголовок карточки"
                       value={cardForm.title}
                       onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })}
                     />
                     <input
+                      name="card-desc"
+                      id="card-desc"
                       className="flex-1 border rounded-2xl px-4 py-3 text-sm"
                       placeholder="Описание (необязательно)"
                       value={cardForm.desc}
                       onChange={(e) => setCardForm({ ...cardForm, desc: e.target.value })}
                     />
                     <select
+                      name="card-weight"
+                      id="card-weight"
                       className="border rounded-2xl px-4 py-3 text-sm"
                       value={cardForm.weight}
                       onChange={(e) => setCardForm({ ...cardForm, weight: Number(e.target.value) })}
@@ -918,14 +930,14 @@ export default function RelationshipLab() {
       {/* Mobile bottom action bar */}
       <div className="fixed inset-x-0 bottom-0 lg:hidden border-t bg-white/95 backdrop-blur p-3 flex items-center gap-2 overflow-x-auto">
         {/* Категория и вес */}
-        <select className="min-w-[9rem] flex-1 border rounded-2xl px-3 py-2 text-sm" value={categoryForHints} onChange={(e) => setCategoryForHints(e.target.value)}>
+  <select name="mobile-category" id="mobile-category" className="min-w-[9rem] flex-1 border rounded-2xl px-3 py-2 text-sm" value={categoryForHints} onChange={(e) => setCategoryForHints(e.target.value)}>
           {CATEGORIES.map((c) => (
             <option value={c.id} key={c.id}>
               {c.label}
             </option>
           ))}
         </select>
-        <select className="w-20 border rounded-2xl px-3 py-2 text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
+  <select name="mobile-impact" id="mobile-impact" className="w-20 border rounded-2xl px-3 py-2 text-sm" value={impact} onChange={(e) => setImpact(Number(e.target.value))}>
           {[1, 5, 10, 15].map((w) => (
             <option key={w} value={w}>
               +{w}
@@ -967,9 +979,11 @@ export default function RelationshipLab() {
                 <button type="button" onClick={sync.startHost} className="mb-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
                   Сгенерировать OFFER
                 </button>
-                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs" value={sync.offerText} readOnly placeholder="Скопируйте OFFER партнёру" onFocus={(e)=>e.target.select()} />
+                <textarea name="host-offer" id="host-offer" className="w-full h-28 border rounded-2xl p-2 text-xs" value={sync.offerText} readOnly placeholder="Скопируйте OFFER партнёру" onFocus={(e)=>e.target.select()} />
                 <div className="mt-2 text-xs text-neutral-600">Вставьте ANSWER от партнёра:</div>
                 <textarea
+                  name="host-answer-input"
+                  id="host-answer-input"
                   className="w-full h-28 border rounded-2xl p-2 text-xs"
                   placeholder="Вставьте ANSWER"
                   value={sync.answerText}
@@ -982,6 +996,8 @@ export default function RelationshipLab() {
               <div className="border rounded-2xl p-4">
                 <div className="font-medium mb-2">2) Присоединиться (гость)</div>
                 <textarea
+                  name="guest-offer-input"
+                  id="guest-offer-input"
                   className="w-full h-28 border rounded-2xl p-2 text-xs"
                   placeholder="Вставьте OFFER от хоста"
                   value={sync.offerText}
@@ -990,7 +1006,7 @@ export default function RelationshipLab() {
                 <button type="button" onClick={() => sync.startJoiner(sync.offerText)} className="mt-2 px-4 py-2 rounded-2xl text-xs font-semibold bg-neutral-900 text-white">
                   Сгенерировать ANSWER
                 </button>
-                <textarea className="w-full h-28 border rounded-2xl p-2 text-xs mt-2" value={sync.answerText} readOnly placeholder="Скопируйте ANSWER и отправьте хосту" onFocus={(e)=>e.target.select()} />
+                <textarea name="guest-answer-output" id="guest-answer-output" className="w-full h-28 border rounded-2xl p-2 text-xs mt-2" value={sync.answerText} readOnly placeholder="Скопируйте ANSWER и отправьте хосту" onFocus={(e)=>e.target.select()} />
               </div>
             </div>
             <div className="mt-3 text-xs">
