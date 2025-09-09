@@ -1106,6 +1106,8 @@ export default function RelationshipLab() {
   const avgObject = useMemo(() => {
     const o = {}; for(const c of CATEGORIES) o[c.id] = Math.round((A[c.id] + B[c.id]) / 2); return o;
   }, [A,B]);
+  // Возможность просматривать партнёра даже если канал упал, но Firestore показал подключение (snapshot сохранён)
+  const canViewPartner = (sync.status === 'connected') || (fireSess?.phase === 'connected');
   const tubesModel = tubeView === 'mine' ? me : (tubeView === 'partner' ? partner : avgObject); // partner & avg read-only
   const setTubesModel = tubeView === 'mine' ? setMe : (()=>{});
   const tubesPartner = tubeView === 'mine' ? partner : me; // for displaying partner overlay when viewing own tubes, and vice versa
@@ -1520,13 +1522,13 @@ export default function RelationshipLab() {
                 >Мои колбы</button>
                 <button
                   type="button"
-                  onClick={() => { if(sync.status!=="connected"){ setShowSync(true); setShowConnectHint(true); notify("Нужно подключить партнера!", { type:'warn', msg:'Следуйте инструкции в открывшемся окне.' }); return; } setTubeView('partner'); }}
-                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='partner' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
+                  onClick={() => { if(!canViewPartner){ setShowSync(true); setShowConnectHint(true); notify("Нужно подключить партнера!", { type:'warn', msg:'Следуйте инструкции в открывшемся окне.' }); return; } setTubeView('partner'); }}
+                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='partner' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'} ${!canViewPartner ? 'opacity-60' : ''}`}
                 >Колбы партнёра</button>
                 <button
                   type="button"
-                  onClick={() => { if(sync.status!=="connected"){ setShowSync(true); setShowConnectHint(true); notify("Нужно подключить партнера!", { type:'warn', msg:'Следуйте инструкции в открывшемся окне.' }); return; } setTubeView('avg'); }}
-                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='avg' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
+                  onClick={() => { if(!canViewPartner){ setShowSync(true); setShowConnectHint(true); notify("Нужно подключить партнера!", { type:'warn', msg:'Следуйте инструкции в открывшемся окне.' }); return; } setTubeView('avg'); }}
+                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='avg' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'} ${!canViewPartner ? 'opacity-60' : ''}`}
                 >Общий баланс</button>
               </div>
             </div>
