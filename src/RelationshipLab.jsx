@@ -1769,6 +1769,9 @@ export default function RelationshipLab() {
               ))}
             </div>
           )}
+          <div className="mt-4 text-[11px] sm:text-[12px] text-neutral-400 text-center">
+            <a href="https://t.me/vetalsmirnov" target="_blank" rel="noopener noreferrer" className="underline hover:text-neutral-600">(by @vetalsmirnov)</a>
+          </div>
         </section>
 
   {/* Rituals removed */}
