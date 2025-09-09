@@ -1682,7 +1682,7 @@ export default function RelationshipLab() {
               <div className="text-base sm:text-lg font-semibold">Пригласить партнера</div>
               <button onClick={() => setShowSync(false)} className="text-xs sm:text-sm px-3 py-2 rounded-2xl border">Закрыть</button>
             </div>
-            <div className="text-xs text-neutral-600 mb-4">Автоматическая синхронизация через Firestore: один код‑ссылка, ответ прилетает автоматически.</div>
+            {/* (Удалено по запросу: описание автоматической синхронизации) */}
             {fireSess.phase==='idle' && (
               <div className="space-y-3">
                 <button onClick={hostCreateLink} className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">Создать ссылку</button>
