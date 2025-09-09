@@ -1785,7 +1785,7 @@ export default function RelationshipLab() {
         {/* Inbox */}
         <section className="mb-8" id="inbox">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base sm:text-lg font-semibold">Входящие предложения</h2>
+            <h2 className="text-base sm:text-lg font-semibold">Вам предлагают</h2>
             <div className="text-xs text-neutral-500 hidden sm:block">Примите предложенные идеи — чтобы пополнить колбу у обоих (по весу карточки)</div>
           </div>
           {myInbox.length === 0 ? (
