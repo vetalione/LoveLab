@@ -1608,14 +1608,24 @@ export default function RelationshipLab() {
           type="button"
           onClick={() => { setShowMobileWizard(true); setMobileStage('weight'); }}
           className="relative justify-self-center px-5 py-2.5 max-[380px]:px-3 rounded-3xl text-[12px] font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-lg active:scale-[0.95] whitespace-nowrap leading-tight overflow-hidden"
+          aria-label="Создать задание"
         >
-          {/* Animated vibrant ring (mobile enhanced) */}
-          <span className="pointer-events-none absolute -inset-[4px] rounded-3xl opacity-70 blur-[4px] animate-[spin_10s_linear_infinite]" style={{ background:'conic-gradient(from_0deg,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)' }}></span>
-          <span className="pointer-events-none absolute -inset-[1px] rounded-3xl bg-neutral-900"></span>
-          <span className="absolute inset-0 rounded-3xl animate-[pulse_2s_ease-in-out_infinite] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_60%)]"></span>
+          {/* Outer rotating rainbow glow */}
+          <span className="pointer-events-none absolute -inset-[5px] rounded-[2.2rem] opacity-80 blur-md animate-[spin_9s_linear_infinite]" style={{ background:'conic-gradient(from_0deg,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)' }} />
+          {/* Inner solid background layer */}
+          <span className="pointer-events-none absolute inset-0 rounded-3xl bg-neutral-900" />
+          {/* Pulsing ring mask (only border glows) */}
+          <span className="pointer-events-none absolute inset-0 rounded-3xl animate-[pulse_2.2s_ease-in-out_infinite]" style={{
+            background:'conic-gradient(from_0deg,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)',
+            WebkitMask:'radial-gradient(circle at 50% 50%, transparent 55%, black 56%)',
+            mask:'radial-gradient(circle at 50% 50%, transparent 55%, black 56%)',
+            opacity:0.55
+          }} />
+          {/* Subtle internal light */}
+            <span className="absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.22),transparent_65%)] animate-[pulse_3.4s_ease-in-out_infinite]" />
           <span className="relative flex items-center gap-1">
             <span className="animate-bounce">✨</span>
-            <span>Задание от ИИ</span>
+            <span>Создать задание</span>
           </span>
         </button>
         {/* Current category icon (right) */}
