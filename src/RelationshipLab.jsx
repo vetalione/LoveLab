@@ -756,9 +756,11 @@ function useManualP2P(onMessage) {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       await waitForICE(pc);
-      setAnswerText(JSON.stringify(pc.localDescription));
+  const sdpStr = JSON.stringify(pc.localDescription);
+  setAnswerText(sdpStr);
       setStatus("connecting");
       setError("");
+  return sdpStr;
     } catch (e) {
       setError(String(e?.message || e));
       setStatus("error");
@@ -818,16 +820,18 @@ function useManualP2P(onMessage) {
   return { status, offerText, answerText, setOfferText, setAnswerText, startHost, acceptAnswer, startJoiner, send, disconnect, error };
 }
 
-function waitForICE(pc) {
+function waitForICE(pc, timeoutMs = 2500) { // early timeout speeds perceived generation
   return new Promise((resolve) => {
     if (pc.iceGatheringState === "complete") return resolve();
-    const check = () => {
+    const finish = () => { pc.removeEventListener("icegatheringstatechange", onState); resolve(); };
+    const timer = setTimeout(finish, timeoutMs);
+    const onState = () => {
       if (pc.iceGatheringState === "complete") {
-        pc.removeEventListener("icegatheringstatechange", check);
-        resolve();
+        clearTimeout(timer);
+        finish();
       }
     };
-    pc.addEventListener("icegatheringstatechange", check);
+    pc.addEventListener("icegatheringstatechange", onState);
   });
 }
 
@@ -923,7 +927,8 @@ export function useFirestoreSession(){
     } catch(e){ setPhase('error'); throw e; }
   }
   async function submitAnswer(code, answerSDP){
-    const ref = doc(db,'p2pSessions', code); await updateDoc(ref,{ answer:answerSDP, status:'answered' });
+  if(!answerSDP || answerSDP.length < 50) throw new Error('Пустой/короткий answer');
+  const ref = doc(db,'p2pSessions', code); await updateDoc(ref,{ answer:answerSDP, status:'answered' });
     // guest schedules cleanup (in case host cannot delete) after short delay
     setTimeout(()=>{ if(!isHostRef.current && docRefRef.current){ deleteDoc(docRefRef.current).catch(()=>{}); docRefRef.current=null; } }, 1000*60*5); // fallback delete after 5m
   }
@@ -1412,8 +1417,8 @@ export default function RelationshipLab() {
       setFsError('');
       const offer = await fireSess.answer(inputCode.trim());
       // we now have offer; build pc & create answer
-      await sync.startJoiner(offer);
-      await fireSess.submitAnswer(inputCode.trim(), sync.answerText);
+  const answerSDP = await sync.startJoiner(offer);
+  await fireSess.submitAnswer(inputCode.trim(), answerSDP);
     } catch(e){ setFsError(String(e?.message||e)); }
   }
   // When remote answer appears for host, set it into acceptAnswer
