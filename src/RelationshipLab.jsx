@@ -1072,8 +1072,8 @@ export default function RelationshipLab() {
   const setMe = player === "A" ? setA : setB;
   const partner = player === "A" ? B : A;
   // Derived tubes based on tubeView toggle
-  const tubesModel = tubeView === 'mine' ? me : partner;
-  const setTubesModel = tubeView === 'mine' ? setMe : (player === 'A' ? setB : setA);
+  const tubesModel = tubeView === 'mine' ? me : partner; // partner snapshot read-only
+  const setTubesModel = tubeView === 'mine' ? setMe : (()=>{});
   const tubesPartner = tubeView === 'mine' ? partner : me; // for displaying partner overlay when viewing own tubes, and vice versa
   const myInbox = player === "A" ? inboxA : inboxB;
   const setMyInbox = player === "A" ? setInboxA : setInboxB;
@@ -1095,15 +1095,13 @@ export default function RelationshipLab() {
     try {
       const msg = JSON.parse(raw);
       if (msg.type === "state") {
+        // Новая семантика: не перезаписываем свои A значениями партнёра.
         applyingRemoteRef.current = true;
-        const s = msg.payload;
-        // batch update – minimal re-renders
-        setA(s.A);
-        setB(s.B);
-        setInboxA(s.inboxA);
-        setInboxB(s.inboxB);
-  // legacy: s.locked ignored (feature removed)
-  setHistory(s.history || []);
+        const s = msg.payload || {};
+        if (s.B && typeof s.B === 'object') setB(s.B);
+        if (Array.isArray(s.inboxA)) setInboxA(s.inboxA);
+        if (Array.isArray(s.inboxB)) setInboxB(s.inboxB);
+        setHistory(s.history || []);
         setGen(s.gen || []);
         setTimeout(() => (applyingRemoteRef.current = false), 50);
       } else if (msg.type === "card") {
@@ -1132,7 +1130,7 @@ export default function RelationshipLab() {
   const lastSentRef = useRef("");
   useEffect(() => {
     if (applyingRemoteRef.current) return;
-  const payload = { A, B, inboxA, inboxB, history, gen }; // locked removed
+  const payload = { B: A, inboxA, inboxB, history, gen }; // отправляем только свой state как B-снимок
     const json = JSON.stringify(payload);
     if (json === lastSentRef.current) return; // unchanged
     const t = setTimeout(() => {
@@ -1394,7 +1392,7 @@ export default function RelationshipLab() {
       let copied=false;
       try { await navigator.clipboard.writeText(url); copied=true; } catch {}
       if (navigator.share) {
-        try { await navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url }); } catch {}
+  try { await navigator.share({ title:'LoveLab', text:'Давай наладим химию в наших отношениях в LoveLab при помощи ИИ', url }); } catch {}
       }
       notify('Ссылка создана', { type:'success', msg: copied? 'Скопирована в буфер' : code });
       setInviteUrl(url);
@@ -1460,7 +1458,7 @@ export default function RelationshipLab() {
         <section className="mb-8" id="base">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
             <div className="flex items-center gap-4 flex-wrap">
-              <h2 className="text-base sm:text-lg font-semibold">Текущий баланс:</h2>
+              <h2 className="text-base sm:text-lg font-semibold">Текущий баланс: {tubeView==='partner' && <span className="font-normal text-neutral-500">(просмотр партнёра)</span>}</h2>
               <div className="flex bg-white/80 rounded-2xl p-1 border">
                 <button
                   type="button"
@@ -1484,7 +1482,7 @@ export default function RelationshipLab() {
               model={tubesModel}
               partner={tubesPartner}
               avg={avg}
-              onChange={(v)=> setTubesModel(v)}
+              onChange={(v)=> { if(tubeView==='partner') return; setTubesModel(v); }}
               disabled={tubeView==='partner'}
               onSelectCategory={(id)=> setCategoryForHints(id)}
               selectedCategory={categoryForHints}
@@ -1492,7 +1490,7 @@ export default function RelationshipLab() {
           </div>
           <SliderRow
             model={tubesModel}
-            onChange={(v) => setTubesModel(v)}
+            onChange={(v) => { if(tubeView==='partner') return; setTubesModel(v); }}
             onSelectCategory={(id)=> setCategoryForHints(id)}
             disabled={tubeView==='partner'}
             selectedCategory={categoryForHints}
@@ -1704,7 +1702,7 @@ export default function RelationshipLab() {
                 <CodeBadge code={fireSess.code} />
                 <div className="flex gap-2 flex-wrap">
                   {navigator.share && (
-                    <button onClick={()=>{ try { navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url: `${window.location.origin}?c=${fireSess.code}` }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
+                    <button onClick={()=>{ try { navigator.share({ title:'LoveLab', text:'Давай наладим химию в наших отношениях в LoveLab при помощи ИИ', url: `${window.location.origin}?c=${fireSess.code}` }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
                   )}
                   <button disabled={regenerating} onClick={hostRegenerateLink} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold border bg-white disabled:opacity-40">{regenerating? '...' : 'Обновить ссылку'}</button>
                 </div>
