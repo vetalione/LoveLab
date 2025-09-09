@@ -928,7 +928,15 @@ export function useFirestoreSession(){
     setTimeout(()=>{ if(!isHostRef.current && docRefRef.current){ deleteDoc(docRefRef.current).catch(()=>{}); docRefRef.current=null; } }, 1000*60*5); // fallback delete after 5m
   }
   function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); setRemoteAnswer(''); isHostRef.current=false; docRefRef.current=null; }
-  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose, cleanupOldSessions };
+  async function cancel(){
+    try {
+      if(isHostRef.current && docRefRef.current){
+        await deleteDoc(docRefRef.current).catch(()=>{});
+      }
+    } catch {}
+    dispose();
+  }
+  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose, cancel, cleanupOldSessions };
 }
 
 // ====== Random card generator ======
@@ -1367,6 +1375,8 @@ export default function RelationshipLab() {
   // Firestore simplified signaling session hook
   const fireSess = useFirestoreSession();
   const [fsError,setFsError]=useState('');
+  const [regenerating,setRegenerating]=useState(false);
+  const [inviteUrl,setInviteUrl]=useState('');
 
   // Helpers for new flow
   async function hostCreateLink(){
@@ -1382,7 +1392,20 @@ export default function RelationshipLab() {
         try { await navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url }); } catch {}
       }
       notify('Ссылка создана', { type:'success', msg: copied? 'Скопирована в буфер' : code });
+      setInviteUrl(url);
     } catch(e){ setFsError(String(e?.message||e)); }
+  }
+  async function hostRegenerateLink(){
+    try {
+      setRegenerating(true); setFsError('');
+      await fireSess.cancel?.();
+      const offer = await sync.startHost();
+      const code = await fireSess.create(offer);
+      const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
+      setInviteUrl(url);
+      try { await navigator.clipboard.writeText(url); notify('Новая ссылка',{ type:'success', msg:'Скопирована'}); } catch { notify('Новая ссылка',{ type:'success', msg: code }); }
+    } catch(e){ setFsError(String(e?.message||e)); }
+    finally { setRegenerating(false); }
   }
   async function guestJoinByCode(inputCode){
     try {
@@ -1670,9 +1693,16 @@ export default function RelationshipLab() {
                   {navigator.share && (
                     <button onClick={()=>{ try { navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url: `${window.location.origin}?c=${fireSess.code}` }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
                   )}
+                  <button disabled={regenerating} onClick={hostRegenerateLink} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold border bg-white disabled:opacity-40">{regenerating? '...' : 'Обновить ссылку'}</button>
                 </div>
                 <div className="text-xs text-neutral-500">Отправь партнёру — он может просто открыть ссылку (автоподключение).</div>
                 <div className="flex items-center gap-2 text-xs text-neutral-500"><span className="animate-spin h-3 w-3 border-2 border-neutral-300 border-t-neutral-900 rounded-full"/>Ожидание ответа…</div>
+              </div>
+            )}
+            {fireSess.phase==='error' && (
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">Ошибка: {fsError || 'Не удалось создать сессию'}</div>
+                <button disabled={regenerating} onClick={hostRegenerateLink} className="w-full px-4 py-3 rounded-2xl text-sm font-semibold bg-neutral-900 text-white disabled:opacity-40">{regenerating? 'Повтор...' : 'Попробовать снова'}</button>
               </div>
             )}
             {fireSess.phase==='answering' && (
