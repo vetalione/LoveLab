@@ -689,9 +689,9 @@ function useManualP2P(onMessage) {
     };
     pc.ondatachannel = (ev) => {
       dcRef.current = ev.channel;
-      dcRef.current.onmessage = (e) => onMessage?.(e.data);
-      dcRef.current.onopen = () => { setStatus('connected'); };
-      dcRef.current.onclose = () => { attemptReconnect('dc-close'); };
+      dcRef.current.onmessage = (e) => handleChannelMessage(e.data);
+      dcRef.current.onopen = () => { heartbeatRef.current.last = Date.now(); setStatus('connected'); try { console.debug('[P2P] datachannel open (guest)'); } catch {}; };
+      dcRef.current.onclose = () => { try { console.debug('[P2P] datachannel close (guest)'); } catch {}; attemptReconnect('dc-close'); };
     };
     setError("");
     return pc;
@@ -717,8 +717,8 @@ function useManualP2P(onMessage) {
       const dc = pc.createDataChannel("lab");
       dcRef.current = dc;
     dc.onmessage = (e) => handleChannelMessage(e.data);
-    dc.onopen = () => { setStatus('connected'); };
-    dc.onclose = () => { attemptReconnect('dc-close'); };
+    dc.onopen = () => { heartbeatRef.current.last = Date.now(); setStatus('connected'); try { console.debug('[P2P] datachannel open (host)'); } catch {}; };
+    dc.onclose = () => { try { console.debug('[P2P] datachannel close (host)'); } catch {}; attemptReconnect('dc-close'); };
       setStatus("connecting");
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -1182,6 +1182,11 @@ export default function RelationshipLab() {
       sentNickRef.current = true;
       sync.send({ type:'nick', payload: myNick });
       // If partner already sent theirs earlier in race, keep it; else wait for handler
+      // отправим сразу актуальное состояние после установления канала
+      try {
+        const initPayload = { B: A, inboxA, inboxB, history, gen };
+        sync.send({ type:'state', payload: initPayload });
+      } catch {}
     }
     if(sync.status !== 'connected'){
       sentNickRef.current = false; // allow resend after reconnection
