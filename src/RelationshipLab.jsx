@@ -1876,6 +1876,13 @@ export default function RelationshipLab() {
                   <button disabled={regenerating} onClick={hostRegenerateLink} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold border bg-white disabled:opacity-40">{regenerating? '...' : 'Обновить ссылку'}</button>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-neutral-500"><span className="animate-spin h-3 w-3 border-2 border-neutral-300 border-t-neutral-900 rounded-full"/>Ожидание ответа…</div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={()=>{ fireSess.cancel(); try { sync.disconnect(); } catch {}; }}
+                    className="text-[11px] px-3 py-1.5 rounded-2xl font-semibold border bg-white hover:bg-neutral-100"
+                  >Назад</button>
+                </div>
               </div>
             )}
             {fireSess.phase==='error' && (
