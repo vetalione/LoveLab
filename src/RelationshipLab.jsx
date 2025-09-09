@@ -1694,13 +1694,11 @@ export default function RelationshipLab() {
               <div className="space-y-3">
                 <CodeBadge code={fireSess.code} />
                 <div className="flex gap-2 flex-wrap">
-                  <button onClick={()=>{ try { navigator.clipboard.writeText(`${window.location.origin}?c=${fireSess.code}`); notify('Скопировано',{ type:'success'}); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold border bg-white">Копировать ссылку</button>
                   {navigator.share && (
                     <button onClick={()=>{ try { navigator.share({ title:'LoveLab подключение', text:'Подключись ко мне в LoveLab', url: `${window.location.origin}?c=${fireSess.code}` }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
                   )}
                   <button disabled={regenerating} onClick={hostRegenerateLink} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold border bg-white disabled:opacity-40">{regenerating? '...' : 'Обновить ссылку'}</button>
                 </div>
-                <div className="text-xs text-neutral-500">Отправь партнёру — он может просто открыть ссылку (автоподключение).</div>
                 <div className="flex items-center gap-2 text-xs text-neutral-500"><span className="animate-spin h-3 w-3 border-2 border-neutral-300 border-t-neutral-900 rounded-full"/>Ожидание ответа…</div>
               </div>
             )}
@@ -1720,7 +1718,7 @@ export default function RelationshipLab() {
               </div>
             )}
             {(fsError || sync.error) && <div className="mt-3 text-xs text-red-600">{fsError || sync.error}</div>}
-            <div className="mt-4 text-[10px] text-neutral-400">Ручной режим (старый) временно отключён.</div>
+            {/* (Удалено по запросу: примечание о ручном режиме) */}
           </div>
         </div>
       )}
