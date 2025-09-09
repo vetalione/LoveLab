@@ -1790,9 +1790,11 @@ export default function RelationshipLab() {
             <div className="text-sm text-neutral-500 border rounded-2xl p-4 sm:p-6 bg-white text-center">Пока пусто.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {myInbox.map((item) => (
+              {myInbox.map((item) => {
+                const senderNick = item.from === myRole ? myNick : partnerNick;
+                return (
                 <div key={item.id} className="rounded-2xl border p-4 bg-white/90 shadow-sm flex flex-col">
-                  <div className="text-xs text-neutral-500 mb-1">От: Игрок {item.from}</div>
+                  <div className="text-xs text-neutral-500 mb-1">От: {senderNick ? senderNick : `Игрок ${item.from}`}</div>
                   <div className="text-sm font-semibold mb-1 flex items-center gap-2">
                     {item.title}{" "}
                     {item.weight ? (() => { const cat = CATEGORIES.find(c=>c.id===item.categoryId); if(!cat) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-900 text-white">+{item.weight}</span>; const txt = readableTextColor(cat.color); return (<span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: cat.color, color: txt, boxShadow:'0 0 0 1px rgba(0,0,0,0.15)' }}>+{item.weight}</span>); })() : null}
@@ -1807,7 +1809,7 @@ export default function RelationshipLab() {
                     </button>
                   </div>
                 </div>
-              ))}
+              ); })}
             </div>
           )}
           <div className="mt-4 text-[11px] sm:text-[12px] text-neutral-400 text-center">
