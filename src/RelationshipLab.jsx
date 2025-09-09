@@ -1608,9 +1608,23 @@ export default function RelationshipLab() {
             <button onClick={() => setShowSync(true)} className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">
               Пригласить партнера
             </button>
-            <span className={`text-xs px-2 py-1 rounded-full border ${sync.status === "connected" ? "bg-green-50 border-green-200 text-green-700" : "bg-white"}`} title={sync.status === 'connected' ? (partnerNick || 'ожидание ника партнёра…') : 'Статус соединения'}>
-              {sync.status === 'connected' ? (partnerNick || '...') : sync.status}
-            </span>
+            {/* Partner status badge (desktop) */}
+            {(() => {
+              const online = sync.status === 'connected';
+              const hasNick = !!partnerNick;
+              const label = hasNick ? partnerNick : 'disconnected';
+              const borderColor = online ? 'border-green-500' : 'border-neutral-300';
+              return (
+                <div
+                  className={`inline-flex items-center px-4 py-2 rounded-2xl border ${borderColor} bg-white text-sm font-semibold tracking-tight text-black min-h-[44px]`}
+                  title={online ? 'Партнёр онлайн' : 'Партнёр оффлайн'}
+                  style={{ boxShadow: online ? '0 0 0 2px rgba(34,197,94,0.15)' : '0 0 0 1px rgba(0,0,0,0.04)' }}
+                >
+                  <span className={`w-2 h-2 rounded-full mr-2 ${online ? 'bg-green-500' : 'bg-neutral-300'}`}></span>
+                  <span className="truncate max-w-[180px]">{label}</span>
+                </div>
+              );
+            })()}
           </div>
         </header>
 
@@ -1764,11 +1778,20 @@ export default function RelationshipLab() {
         <button
           type="button"
           onClick={() => { setShowSync(true); if (sync.status !== 'connected') setShowConnectHint(true); }}
-      className="justify-self-start inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-white text-[10px] font-semibold active:scale-[0.97] whitespace-nowrap"
-          aria-label={sync.status === 'connected' ? 'Подключено' : 'Не подключено'}
+      className="justify-self-start inline-flex items-center gap-2 px-3 py-2 rounded-2xl border bg-white text-[11px] font-semibold active:scale-[0.97] whitespace-nowrap min-h-[40px]"
+          aria-label={sync.status === 'connected' ? 'Партнёр онлайн' : 'Партнёр оффлайн'}
         >
-          <span className={`w-2 h-2 rounded-full shadow-inner ${sync.status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'}`}></span>
-          <span>{sync.status === 'connected' ? 'ON' : 'OFF'}</span>
+          {(() => {
+            const online = sync.status === 'connected';
+            const hasNick = !!partnerNick;
+            const label = hasNick ? partnerNick : (online ? '...' : 'off');
+            return (
+              <>
+                <span className={`w-2 h-2 rounded-full shadow-inner ${online ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'}`}></span>
+                <span className="truncate max-w-[110px]">{label}</span>
+              </>
+            );
+          })()}
         </button>
         {/* Center AI button */}
         <button
