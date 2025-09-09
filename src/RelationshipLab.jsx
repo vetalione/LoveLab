@@ -870,6 +870,7 @@ export function useFirestoreSession(){
   const [phase,setPhase]=useState('idle'); // idle|creating|waiting|answering|connected|error
   const [code,setCode]=useState('');
   const [remoteAnswer,setRemoteAnswer]=useState('');
+  const [docData,setDocData]=useState(null); // full snapshot data
   const unsubRef = useRef(null);
   const docRefRef = useRef(null); // holds created/answered doc ref
   const isHostRef = useRef(false);
@@ -911,16 +912,18 @@ export function useFirestoreSession(){
       const {code,ref}=await generateCode();
       docRefRef.current = ref;
   if(!offerSDP || offerSDP.length < 50) throw new Error('Пустой offer — повторите ещё раз');
-  await setDoc(ref,{ offer:offerSDP, createdAt:serverTimestamp(), status:'waiting' });
+  await setDoc(ref,{ offer:offerSDP, createdAt:serverTimestamp(), status:'waiting', offerStamp: Date.now() });
       setCode(code); setPhase('waiting');
       unsubRef.current = onSnapshot(ref,(snap)=>{
         const d=snap.data();
+        setDocData(d||null);
         if (d?.answer && phase!=='connected') {
           setRemoteAnswer(d.answer); setPhase('connected');
           // (отключено) раньше мы удаляли документ сразу после подключения, что вызывало "Сессия не найдена" при повторных обращениях
           // оставляем документ до TTL очистки
         }
       });
+      try { localStorage.setItem('labSessCode', code); localStorage.setItem('labSessRole','host'); } catch {}
       return code;
     } catch(e){ setPhase('error'); throw e; }
   }
@@ -935,7 +938,8 @@ export function useFirestoreSession(){
       if(!snap.exists()) throw new Error('Сессия не найдена');
       const data=snap.data();
       if(!data.offer) throw new Error('Нет offer');
-      unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); if(d?.answer){ setRemoteAnswer(d.answer); setPhase('connected'); } });
+      unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); setDocData(d||null); if(d?.answer){ setRemoteAnswer(d.answer); setPhase('connected'); } });
+      try { localStorage.setItem('labSessCode', code); localStorage.setItem('labSessRole','guest'); } catch {}
       return data.offer; // возвращаем offer для установки remote
     } catch(e){ setPhase('error'); throw e; }
   }
@@ -943,6 +947,27 @@ export function useFirestoreSession(){
   if(!answerSDP || answerSDP.length < 50) throw new Error('Пустой/короткий answer');
   const ref = doc(db,'p2pSessions', code); await updateDoc(ref,{ answer:answerSDP, status:'answered' });
   // (отключено удаление) пусть документ живёт до TTL
+  }
+  // Re-offer (host resume after reload without new code)
+  async function reoffer(existingCode, newOfferSDP){
+    if(!existingCode || !newOfferSDP) throw new Error('reoffer: нет кода или offer');
+    await ensureAnonAuth();
+    const ref = doc(db,'p2pSessions', existingCode);
+    const snap = await getDoc(ref);
+    if(!snap.exists()) throw new Error('Сессия не найдена');
+    docRefRef.current = ref; isHostRef.current = true;
+    setCode(existingCode);
+    setPhase('waiting');
+    // overwrite offer & reset answer for renegotiation
+    await updateDoc(ref,{ offer: newOfferSDP, answer: null, status:'waiting', offerStamp: Date.now() });
+    // snapshot listener (replace old)
+    cleanupListener();
+    unsubRef.current = onSnapshot(ref,(s)=>{ const d=s.data(); setDocData(d||null); if(d?.answer && phase!=='connected'){ setRemoteAnswer(d.answer); setPhase('connected'); } });
+    try { localStorage.setItem('labSessCode', existingCode); localStorage.setItem('labSessRole','host'); } catch {}
+  }
+  // Passive state push (mirror last known A/B for offline snapshot viewing)
+  async function pushMirror(partial){
+    try { if(!docRefRef.current) return; await updateDoc(docRefRef.current, { ...partial, lastMirrorAt: serverTimestamp() }); } catch {}
   }
   function dispose(){ cleanupListener(); setPhase('idle'); setCode(''); setRemoteAnswer(''); isHostRef.current=false; docRefRef.current=null; }
   async function cancel(){
@@ -952,8 +977,9 @@ export function useFirestoreSession(){
       }
     } catch {}
     dispose();
+    try { localStorage.removeItem('labSessCode'); localStorage.removeItem('labSessRole'); } catch {}
   }
-  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose, cancel, cleanupOldSessions };
+  return { phase, code, remoteAnswer, create, answer, submitAnswer, dispose, cancel, cleanupOldSessions, reoffer, pushMirror, docData };
 }
 
 // ====== Random card generator ======
@@ -1444,6 +1470,7 @@ export default function RelationshipLab() {
   const [showSync, setShowSync] = useState(false);
   // Firestore simplified signaling session hook
   const fireSess = useFirestoreSession();
+  const resumeTriedRef = useRef(false);
   // Возможность просматривать партнёра даже если канал упал, но Firestore показал подключение (snapshot сохранён)
   const canViewPartner = (sync.status === 'connected') || (fireSess?.phase === 'connected');
   const [fsError,setFsError]=useState('');
@@ -1498,6 +1525,75 @@ export default function RelationshipLab() {
 
   // Run TTL cleanup once on mount (best-effort)
   useEffect(()=>{ fireSess.cleanupOldSessions?.(); },[]);
+
+  // ===== Session auto-resume (host or guest) =====
+  useEffect(() => {
+    if (resumeTriedRef.current) return;
+    if (fireSess.phase !== 'idle') return; // only attempt once while idle
+    try {
+      const savedCode = localStorage.getItem('labSessCode');
+      const savedRole = localStorage.getItem('labSessRole');
+      if (!savedCode || !savedRole) return;
+      resumeTriedRef.current = true;
+      if (savedRole === 'host') {
+        // Recreate offer & reoffer
+        (async () => {
+          try {
+            const newOffer = await sync.startHost();
+            await fireSess.reoffer(savedCode, newOffer);
+            notify('Соединение восстанавливается', { type: 'warn', msg: 'Новый offer отправлен' });
+          } catch (e) {
+            notify('Не удалось восстановить', { type: 'error', msg: String(e.message||e) });
+          }
+        })();
+      } else if (savedRole === 'guest') {
+        (async () => {
+          try {
+            const offer = await fireSess.answer(savedCode);
+            const ans = await sync.startJoiner(offer);
+            await fireSess.submitAnswer(savedCode, ans);
+            notify('Переподключение гостя', { type: 'warn', msg: 'Ответ отправлен' });
+          } catch (e) {
+            notify('Не удалось переподключиться', { type: 'error', msg: String(e.message||e) });
+          }
+        })();
+      }
+    } catch {}
+  }, [fireSess.phase]);
+
+  // ===== Mirror my state to Firestore for offline recovery =====
+  useEffect(() => {
+    // Only mirror if we have an active session code (waiting or connected)
+    if (!fireSess.code) return;
+    const role = (()=>{ try { return localStorage.getItem('labSessRole'); } catch { return null; } })();
+    // host mirrors as stateA, guest as stateB
+    const payload = { A }; // local perspective always A for now
+    const toPush = role === 'host' ? { stateA: A, nickA: myNick || undefined } : { stateB: A, nickB: myNick || undefined };
+    const json = JSON.stringify(toPush);
+    const mirrorRef = role === 'host' ? useRef(null) : useRef(null); // dummy to satisfy lint (scoped effect)
+    const t = setTimeout(()=>{ fireSess.pushMirror?.(toPush); }, 800); // debounce sync
+    return () => clearTimeout(t);
+  }, [A, fireSess.code, myNick]);
+
+  // ===== Seed partner snapshot from mirrored Firestore data if available (before WebRTC) =====
+  useEffect(() => {
+    if (sync.status === 'connected') return; // real-time channel supersedes mirror
+    if (!fireSess.docData) return;
+    try {
+      const role = localStorage.getItem('labSessRole');
+      if (role === 'host') {
+        if (fireSess.docData.stateB && Object.keys(fireSess.docData.stateB).length === 5) {
+          setB(prev => prev === fireSess.docData.stateB ? prev : fireSess.docData.stateB);
+          if (!partnerNick && fireSess.docData.nickB) setPartnerNick(fireSess.docData.nickB);
+        }
+      } else if (role === 'guest') {
+        if (fireSess.docData.stateA && Object.keys(fireSess.docData.stateA).length === 5) {
+          setB(prev => prev === fireSess.docData.stateA ? prev : fireSess.docData.stateA); // partner into B
+          if (!partnerNick && fireSess.docData.nickA) setPartnerNick(fireSess.docData.nickA);
+        }
+      }
+    } catch {}
+  }, [fireSess.docData, sync.status]);
 
   return (
     <div className="min-h-screen w-full bg-neutral-50 text-neutral-900 pb-24 lg:pb-10">
