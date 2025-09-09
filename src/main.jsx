@@ -16,8 +16,16 @@ function injectOverlay(){
 function showErrorOverlay(err){
 	const el = injectOverlay();
 	if(!el) return;
-	const msg = (err && err.stack) ? err.stack : String(err);
-	el.innerText='🔥 Runtime error:\n\n'+msg;
+	let header='🔥 Runtime error';
+	let name=''; let message=''; let stack='';
+	if(err){
+		name = err.name || '';
+		message = err.message || (typeof err === 'string'? err : '');
+		stack = err.stack || '';
+	}
+	const composed = [header, name && ('Name: '+name), message && ('Message: '+message), stack].filter(Boolean).join('\n\n');
+	el.innerText = composed;
+	try { console.error('[RUNTIME]', err); } catch {}
 }
 window.__SHOW_ERR__ = showErrorOverlay;
 
