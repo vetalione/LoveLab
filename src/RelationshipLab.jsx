@@ -1057,6 +1057,8 @@ function Toasts({ toasts, onClose }) {
 export default function RelationshipLab() {
   // Роль определяется динамически (host=A, guest=B) вместо жёсткого player='A'
   const [myRole, setMyRole] = useState('A'); // 'A' | 'B'
+  const myRoleRef = useRef('A');
+  useEffect(()=>{ myRoleRef.current = myRole; }, [myRole]);
   // Which set of tubes we are currently viewing/editing: 'mine' | 'partner'
   const [tubeView, setTubeView] = useState('mine'); // 'avg' added to options
   const [A, setA] = useState({ ...defaultScale });
@@ -1170,10 +1172,36 @@ export default function RelationshipLab() {
         setTimeout(() => (applyingRemoteRef.current = false), 50);
       } else if (msg.type === "card") {
   try { console.debug('[P2P][in] card', msg.payload?.title); } catch {}
-        const item = msg.payload;
-        if (item.to === "A") setInboxA((l) => [item, ...l]);
-        else setInboxB((l) => [item, ...l]);
-        notify("Получена карточка", { msg: item.title });
+        const item = msg.payload || {};
+        const roleNow = myRoleRef?.current || 'A';
+        try {
+          console.debug('[CARD][in] raw', { item, myRole: roleNow, inboxALen: inboxA.length, inboxBLen: inboxB.length });
+        } catch {}
+        if(!item || !item.id || !item.to){
+          try { console.warn('[CARD][in] skipped: invalid payload'); } catch {}
+        } else {
+          // Idempotency: avoid duplicate insertion if already present
+          const existsA = item.to === 'A' && inboxA.some(x=>x.id===item.id);
+          const existsB = item.to === 'B' && inboxB.some(x=>x.id===item.id);
+          if(existsA || existsB){
+            try { console.debug('[CARD][in] duplicate ignored', item.id); } catch {}
+          } else {
+            if (item.to === "A") {
+              setInboxA((l) => {
+                try { console.debug('[CARD][in] setInboxA before/after', l.length, l.length+1); } catch {}
+                return [item, ...l];
+              });
+            } else if (item.to === 'B') {
+              setInboxB((l) => {
+                try { console.debug('[CARD][in] setInboxB before/after', l.length, l.length+1); } catch {}
+                return [item, ...l];
+              });
+            } else {
+              try { console.warn('[CARD][in] unknown target', item.to); } catch {}
+            }
+            notify("Получена карточка", { msg: item.title });
+          }
+        }
       } else if (msg.type === "accept") {
   try { console.debug('[P2P][in] accept', msg.payload?.id); } catch {}
         const { id, categoryId, weight } = msg.payload;
@@ -1280,9 +1308,11 @@ export default function RelationshipLab() {
   const [sendingPulse, setSendingPulse] = useState(false);
 
   const sendCardToPartner = useCallback(async function sendCardToPartner(card, categoryId) {
+    const role = myRoleRef.current;
     const id = uid();
-    const payload = { ...card, id, categoryId, from: myRole, to: myRole === "A" ? "B" : "A" };
-    setPartnerInbox([payload, ...partnerInbox]);
+    const payload = { ...card, id, categoryId, from: role, to: role === "A" ? "B" : "A" };
+    try { console.debug('[CARD][out] sending', payload); } catch {}
+    setPartnerInbox([payload, ...partnerInbox]); // оптимистично кладём в локальное представление партнёра
     setSendingPulse(true);
     await sleep(120);
     setSendingPulse(false);
@@ -1293,7 +1323,7 @@ export default function RelationshipLab() {
       notify("Карточка отправлена", { type: "success" });
     }
     sync.send({ type: "card", payload });
-  }, [myRole, partnerInbox, setPartnerInbox, sync]);
+  }, [partnerInbox, setPartnerInbox, sync]);
 
   const handleSendSuggestion = useCallback((card) => {
     const withWeight = { ...card, weight: card.weight ?? impact };
