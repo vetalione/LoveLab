@@ -1603,6 +1603,14 @@ export default function RelationshipLab() {
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">🧪✨ LoveLab</h1>
             <p className="text-neutral-500 text-xs sm:text-sm">Восстановите химию ваших отношений!</p>
+            <p className="text-[10px] sm:text-[11px] text-neutral-400 mt-1">
+              <a
+                href="https://t.me/vetalsmirnov"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-neutral-600"
+              >(by @vetalsmirnov)</a>
+            </p>
           </div>
           <div className="hidden lg:flex items-center gap-3 flex-wrap">
             <button onClick={() => setShowSync(true)} className="px-4 py-2 rounded-2xl text-sm font-semibold bg-neutral-900 text-white">
