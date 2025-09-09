@@ -1125,9 +1125,12 @@ export default function RelationshipLab() {
     return o;
   }, [A, B]);
 
-  const me = myRole === "A" ? A : B;
-  const setMe = myRole === "A" ? setA : setB;
-  const partner = myRole === "A" ? B : A;
+  // IMPORTANT: локальные редактируемые значения всегда живут в A, а снимок партнёра в B.
+  // myRole теперь используется ТОЛЬКО для маркировки исходящих сообщений (from/to) и выбора входящего инбокса.
+  // Это устраняет проблему когда гость редактировал B и его собственные значения перезаписывались приходящим state хоста.
+  const me = A;
+  const setMe = setA;
+  const partner = B;
   // Derived tubes based on tubeView toggle
   const avgObject = useMemo(() => {
     const o = {}; for(const c of CATEGORIES) o[c.id] = Math.round((A[c.id] + B[c.id]) / 2); return o;
@@ -1155,11 +1158,11 @@ export default function RelationshipLab() {
     try {
       const msg = JSON.parse(raw);
       if (msg.type === "state") {
-  try { console.debug('[P2P][in] state', { fromNick: partnerNick || 'remote', keys: Object.keys(msg.payload||{}), sample: msg.payload?.B }); } catch {}
-        // Новая семантика: не перезаписываем свои A значениями партнёра.
+  try { console.debug('[P2P][in] state', { fromNick: partnerNick || 'remote', keys: Object.keys(msg.payload||{}), sampleB: msg.payload?.B }); } catch {}
+        // Мы всегда рассылаем своё локальное (редактируемое) состояние как B партнёру.
+        // Здесь мы только обновляем B (snapshot партнёра) и никогда не трогаем A, чтобы пользователь не терял локальные правки.
         applyingRemoteRef.current = true;
         const s = msg.payload || {};
-        // Подхватываем ник, если он пришёл внутри state (redundant channel для надёжности)
         if (s.nick && !partnerNick && typeof s.nick === 'string') {
           try { console.debug('[P2P][in] state.nick', s.nick); } catch {}
           setPartnerNick(s.nick);
@@ -1168,7 +1171,6 @@ export default function RelationshipLab() {
         if (Array.isArray(s.inboxA)) setInboxA(s.inboxA);
         if (Array.isArray(s.inboxB)) setInboxB(s.inboxB);
         setHistory(s.history || []);
-  // gen не синхронизируем чтобы не показывать черновики идей партнёра
         setTimeout(() => (applyingRemoteRef.current = false), 50);
       } else if (msg.type === "card") {
   try { console.debug('[P2P][in] card', msg.payload?.title); } catch {}
@@ -1762,7 +1764,7 @@ export default function RelationshipLab() {
                 </button>
               ))}
             </div>
-            <div className="text-xs text-neutral-500">A = вы, B = партнёр</div>
+            <div className="text-xs text-neutral-500">A = ваши колбы (редактируемые), B = партнёр</div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm flex flex-col justify-between">
