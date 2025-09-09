@@ -1106,8 +1106,6 @@ export default function RelationshipLab() {
   const avgObject = useMemo(() => {
     const o = {}; for(const c of CATEGORIES) o[c.id] = Math.round((A[c.id] + B[c.id]) / 2); return o;
   }, [A,B]);
-  // Возможность просматривать партнёра даже если канал упал, но Firestore показал подключение (snapshot сохранён)
-  const canViewPartner = (sync.status === 'connected') || (fireSess?.phase === 'connected');
   const tubesModel = tubeView === 'mine' ? me : (tubeView === 'partner' ? partner : avgObject); // partner & avg read-only
   const setTubesModel = tubeView === 'mine' ? setMe : (()=>{});
   const tubesPartner = tubeView === 'mine' ? partner : me; // for displaying partner overlay when viewing own tubes, and vice versa
@@ -1163,6 +1161,8 @@ export default function RelationshipLab() {
       }
     } catch {}
   });
+  // Возможность просматривать партнёра даже если канал упал, но Firestore показал подключение (snapshot сохранён)
+  const canViewPartner = (sync.status === 'connected') || (fireSess?.phase === 'connected');
 
   // ====== Debounced P2P state sync (skip if unchanged) ======
   const lastSentRef = useRef("");
