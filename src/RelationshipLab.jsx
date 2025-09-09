@@ -1022,7 +1022,7 @@ export default function RelationshipLab() {
   const player = 'A';
   const myRole = 'A';
   // Which set of tubes we are currently viewing/editing: 'mine' | 'partner'
-  const [tubeView, setTubeView] = useState('mine');
+  const [tubeView, setTubeView] = useState('mine'); // 'avg' added to options
   const [A, setA] = useState({ ...defaultScale });
   const [B, setB] = useState({ ...defaultScale });
   // Removed legacy lock feature (was {locked} state controlling editability)
@@ -1072,7 +1072,10 @@ export default function RelationshipLab() {
   const setMe = player === "A" ? setA : setB;
   const partner = player === "A" ? B : A;
   // Derived tubes based on tubeView toggle
-  const tubesModel = tubeView === 'mine' ? me : partner; // partner snapshot read-only
+  const avgObject = useMemo(() => {
+    const o = {}; for(const c of CATEGORIES) o[c.id] = Math.round((A[c.id] + B[c.id]) / 2); return o;
+  }, [A,B]);
+  const tubesModel = tubeView === 'mine' ? me : (tubeView === 'partner' ? partner : avgObject); // partner & avg read-only
   const setTubesModel = tubeView === 'mine' ? setMe : (()=>{});
   const tubesPartner = tubeView === 'mine' ? partner : me; // for displaying partner overlay when viewing own tubes, and vice versa
   const myInbox = player === "A" ? inboxA : inboxB;
@@ -1470,6 +1473,11 @@ export default function RelationshipLab() {
                   onClick={() => { if(sync.status!=="connected"){ setShowSync(true); setShowConnectHint(true); notify("Нужно подключить партнера!", { type:'warn', msg:'Следуйте инструкции в открывшемся окне.' }); return; } setTubeView('partner'); }}
                   className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='partner' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
                 >Колбы партнёра</button>
+                <button
+                  type="button"
+                  onClick={() => { if(sync.status!=="connected"){ setShowSync(true); setShowConnectHint(true); notify("Нужно подключить партнера!", { type:'warn', msg:'Следуйте инструкции в открывшемся окне.' }); return; } setTubeView('avg'); }}
+                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition ${tubeView==='avg' ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-200/60'}`}
+                >Общий баланс</button>
               </div>
             </div>
             {/* (Lock feature removed) */}
@@ -1482,7 +1490,7 @@ export default function RelationshipLab() {
               model={tubesModel}
               partner={tubesPartner}
               avg={avg}
-              onChange={(v)=> { if(tubeView==='partner') return; setTubesModel(v); }}
+              onChange={(v)=> { if(tubeView!=='mine') return; setTubesModel(v); }}
               disabled={tubeView==='partner'}
               onSelectCategory={(id)=> setCategoryForHints(id)}
               selectedCategory={categoryForHints}
@@ -1490,9 +1498,9 @@ export default function RelationshipLab() {
           </div>
           <SliderRow
             model={tubesModel}
-            onChange={(v) => { if(tubeView==='partner') return; setTubesModel(v); }}
+            onChange={(v) => { if(tubeView!=='mine') return; setTubesModel(v); }}
             onSelectCategory={(id)=> setCategoryForHints(id)}
-            disabled={tubeView==='partner'}
+            disabled={tubeView!=='mine'}
             selectedCategory={categoryForHints}
           />
         </section>
