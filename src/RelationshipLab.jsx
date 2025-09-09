@@ -1607,10 +1607,16 @@ export default function RelationshipLab() {
         <button
           type="button"
           onClick={() => { setShowMobileWizard(true); setMobileStage('weight'); }}
-      className="relative justify-self-center px-4 py-2 max-[380px]:px-3 rounded-2xl text-[11px] sm:text-xs font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-md active:scale-[0.97] whitespace-nowrap leading-tight"
+          className="relative justify-self-center px-5 py-2.5 max-[380px]:px-3 rounded-3xl text-[12px] font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-lg active:scale-[0.95] whitespace-nowrap leading-tight overflow-hidden"
         >
-          <span className="absolute -inset-[2px] rounded-2xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] opacity-50 animate-[pulse_3s_ease-in-out_infinite] blur-[2px]"></span>
-          <span className="relative flex items-center gap-1"><span className="animate-pulse-spark">✨</span><span>Задание от ИИ</span></span>
+          {/* Animated vibrant ring (mobile enhanced) */}
+          <span className="pointer-events-none absolute -inset-[4px] rounded-3xl opacity-70 blur-[4px] animate-[spin_10s_linear_infinite]" style={{ background:'conic-gradient(from_0deg,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)' }}></span>
+          <span className="pointer-events-none absolute -inset-[1px] rounded-3xl bg-neutral-900"></span>
+          <span className="absolute inset-0 rounded-3xl animate-[pulse_2s_ease-in-out_infinite] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_60%)]"></span>
+          <span className="relative flex items-center gap-1">
+            <span className="animate-bounce">✨</span>
+            <span>Задание от ИИ</span>
+          </span>
         </button>
         {/* Current category icon (right) */}
         <div className="justify-self-end flex items-center">
