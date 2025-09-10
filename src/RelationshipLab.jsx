@@ -1854,15 +1854,15 @@ export default function RelationshipLab() {
         <button
           type="button"
           onClick={() => { setShowMobileWizard(true); setMobileStage('weight'); }}
-          className="relative justify-self-center px-5 py-2.5 max-[380px]:px-3 rounded-3xl text-[12px] font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-lg active:scale-[0.95] whitespace-nowrap leading-tight overflow-hidden"
+          className="relative justify-self-center px-7 py-3 max-[380px]:px-4 rounded-3xl text-[13px] font-semibold bg-neutral-900 text-white flex items-center gap-1 shadow-xl active:scale-[0.95] whitespace-nowrap leading-tight overflow-hidden min-h-[48px]"
           aria-label="Создать задание"
         >
-          {/* Standardized spinning conic outline (desktop style) */}
-          <span className="absolute -inset-1 rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[spin_8s_linear_infinite] opacity-70 blur-[1px]"></span>
+          {/* Animated rainbow contour (glow outside edges) */}
+          <span className="pointer-events-none absolute -inset-[3px] rounded-3xl bg-[conic-gradient(at_50%_50%,#ff5f6d,#ffc371,#ffe66d,#8aff6d,#6dffe6,#6d8dff,#d86dff,#ff6dde,#ff5f6d)] animate-[spin_7s_linear_infinite] opacity-80 blur-[2px]"></span>
           {/* Base background */}
-          <span className="absolute inset-0 rounded-3xl bg-neutral-900"></span>
+          <span className="pointer-events-none absolute inset-0 rounded-3xl bg-neutral-900"></span>
           {/* Soft internal highlight */}
-          <span className="absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_65%)]"></span>
+          <span className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_65%)]"></span>
           <span className="relative flex items-center gap-1">
             <span className="animate-bounce">✨</span>
             <span>Создать задание</span>
