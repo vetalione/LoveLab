@@ -1529,8 +1529,9 @@ export default function RelationshipLab() {
   const offer = await sync.startHost(); // get fresh SDP directly
   const code = await fireSess.create(offer);
       const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
+    const shareText = `Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`;
       let copied=false;
-      try { await navigator.clipboard.writeText(url); copied=true; } catch {}
+    try { await navigator.clipboard.writeText(shareText); copied=true; } catch {}
       if (navigator.share) {
   try { await navigator.share({ title:'LoveLab', text:'Давай наладим химию в наших отношениях в LoveLab при помощи ИИ', url }); } catch {}
       }
@@ -1545,8 +1546,9 @@ export default function RelationshipLab() {
       const offer = await sync.startHost();
       const code = await fireSess.create(offer);
       const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
+  const shareText = `Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`;
       setInviteUrl(url);
-      try { await navigator.clipboard.writeText(url); notify('Новая ссылка',{ type:'success', msg:'Скопирована'}); } catch { notify('Новая ссылка',{ type:'success', msg: code }); }
+  try { await navigator.clipboard.writeText(shareText); notify('Новая ссылка',{ type:'success', msg:'Скопирована'}); } catch { notify('Новая ссылка',{ type:'success', msg: code }); }
     } catch(e){ setFsError(String(e?.message||e)); }
     finally { setRegenerating(false); }
   }
@@ -2015,7 +2017,7 @@ function CodeBadge({ code }) {
   return (
     <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-neutral-100 border text-xs font-mono select-all">
       <span>{code}</span>
-      <button onClick={()=>{ try { navigator.clipboard.writeText(`${window.location.origin}?c=${code}`); } catch{} }} className="text-[10px] px-2 py-1 rounded-full border bg-white">Copy</button>
+  <button onClick={()=>{ try { const url = `${window.location.origin}?c=${code}`; navigator.clipboard.writeText(`Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`); } catch{} }} className="text-[10px] px-2 py-1 rounded-full border bg-white">Copy</button>
     </div>
   );
 }
