@@ -2017,7 +2017,7 @@ function CodeBadge({ code }) {
   return (
     <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-neutral-100 border text-xs font-mono select-all">
       <span>{code}</span>
-  <button onClick={()=>{ try { const url = `${window.location.origin}?c=${code}`; navigator.clipboard.writeText(`Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`); } catch{} }} className="text-[10px] px-2 py-1 rounded-full border bg-white">Copy</button>
+  <button onClick={()=>{ try { navigator.clipboard.writeText(code); } catch{} }} className="text-[10px] px-2 py-1 rounded-full border bg-white">Copy</button>
     </div>
   );
 }
