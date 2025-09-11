@@ -1529,11 +1529,12 @@ export default function RelationshipLab() {
   const offer = await sync.startHost(); // get fresh SDP directly
   const code = await fireSess.create(offer);
       const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
-    const shareText = `Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`;
+    const invitePhrase = 'Давай наладим химию в наших отношениях в LoveLab при помощи ИИ';
+    const shareText = `${invitePhrase} ${url}`;
       let copied=false;
     try { await navigator.clipboard.writeText(shareText); copied=true; } catch {}
       if (navigator.share) {
-  try { await navigator.share({ title:'LoveLab', text:'Давай наладим химию в наших отношениях в LoveLab при помощи ИИ', url }); } catch {}
+  try { await navigator.share({ title:'LoveLab', text: shareText }); } catch {}
       }
       notify('Ссылка создана', { type:'success', msg: copied? 'Скопирована в буфер' : code });
       setInviteUrl(url);
@@ -1546,7 +1547,8 @@ export default function RelationshipLab() {
       const offer = await sync.startHost();
       const code = await fireSess.create(offer);
       const url = `${window.location.origin}?c=${encodeURIComponent(code)}`;
-  const shareText = `Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`;
+  const invitePhrase = 'Давай наладим химию в наших отношениях в LoveLab при помощи ИИ';
+  const shareText = `${invitePhrase} ${url}`;
       setInviteUrl(url);
   try { await navigator.clipboard.writeText(shareText); notify('Новая ссылка',{ type:'success', msg:'Скопирована'}); } catch { notify('Новая ссылка',{ type:'success', msg: code }); }
     } catch(e){ setFsError(String(e?.message||e)); }
@@ -1952,8 +1954,10 @@ export default function RelationshipLab() {
               <div className="space-y-3">
                 <CodeBadge code={fireSess.code} />
                 <div className="flex gap-2 flex-wrap">
-                  {navigator.share && (
-                    <button onClick={()=>{ try { navigator.share({ title:'LoveLab', text:'Давай наладим химию в наших отношениях в LoveLab при помощи ИИ', url: `${window.location.origin}?c=${fireSess.code}` }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
+                  {(typeof navigator!=='undefined' && navigator.share) ? (
+                    <button onClick={()=>{ const url=`${window.location.origin}?c=${fireSess.code}`; const shareText=`Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`; try { navigator.share({ title:'LoveLab', text: shareText }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
+                  ) : (
+                    <button onClick={()=>{ const url=`${window.location.origin}?c=${fireSess.code}`; const shareText=`Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`; try { navigator.clipboard.writeText(shareText); notify('Сообщение скопировано',{ type:'success'}); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
                   )}
                   <button disabled={regenerating} onClick={hostRegenerateLink} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold border bg-white disabled:opacity-40">{regenerating? '...' : 'Обновить ссылку'}</button>
                 </div>
