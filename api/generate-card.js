@@ -94,8 +94,12 @@ export default async function handler(req, res) {
     const w = Math.min(15, Math.max(1, parseInt(weight,10)||5));
     const prompt = buildPrompt(categoryId, w);
 
-    // Retry logic across models and attempts (do NOT consume quota unless success)
-    const models = [process.env.OPENAI_MODEL || 'gpt-4o-mini', 'gpt-4o'];
+  // Retry logic across models and attempts (do NOT consume quota unless success)
+  // Primary target: gpt-5 (or override via OPENAI_MODEL). Fallbacks cascade to earlier stable families.
+  const primary = process.env.OPENAI_MODEL || 'gpt-5';
+  const fallbackOrder = [primary, 'gpt-5-preview', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'];
+  // Deduplicate while preserving order
+  const models = [...new Set(fallbackOrder)];
     const maxAttemptsPerModel = 2;
     let aiRaw = '', lastErr = null, successJson = null;
 
