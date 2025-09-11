@@ -1534,7 +1534,7 @@ export default function RelationshipLab() {
       let copied=false;
     try { await navigator.clipboard.writeText(shareText); copied=true; } catch {}
       if (navigator.share) {
-  try { await navigator.share({ title:'LoveLab', text: shareText }); } catch {}
+  try { await navigator.share({ text: shareText }); } catch {}
       }
       notify('Ссылка создана', { type:'success', msg: copied? 'Скопирована в буфер' : code });
       setInviteUrl(url);
@@ -1955,7 +1955,7 @@ export default function RelationshipLab() {
                 <CodeBadge code={fireSess.code} />
                 <div className="flex gap-2 flex-wrap">
                   {(typeof navigator!=='undefined' && navigator.share) ? (
-                    <button onClick={()=>{ const url=`${window.location.origin}?c=${fireSess.code}`; const shareText=`Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`; try { navigator.share({ title:'LoveLab', text: shareText }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
+                    <button onClick={()=>{ const url=`${window.location.origin}?c=${fireSess.code}`; const shareText=`Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`; try { navigator.share({ text: shareText }); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
                   ) : (
                     <button onClick={()=>{ const url=`${window.location.origin}?c=${fireSess.code}`; const shareText=`Давай наладим химию в наших отношениях в LoveLab при помощи ИИ ${url}`; try { navigator.clipboard.writeText(shareText); notify('Сообщение скопировано',{ type:'success'}); } catch{} }} className="px-3 py-1.5 rounded-2xl text-[11px] font-semibold bg-neutral-900 text-white">Поделиться</button>
                   )}
